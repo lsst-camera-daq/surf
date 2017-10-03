@@ -2,7 +2,7 @@
 -- File       : Pgp2bRxPhy.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2009-05-27
--- Last update: 2017-03-28
+-- Last update: 2017-10-03
 -------------------------------------------------------------------------------
 -- Description:
 -- Physical interface receive module for the Pretty Good Protocol version 2 core. 
@@ -106,6 +106,8 @@ architecture Pgp2bRxPhy of Pgp2bRxPhy is
    signal nxtRxLinkReady      : sl;
    signal stateCntRst         : sl;
    signal stateCnt            : slv(19 downto 0)                 := (others => '0');
+   signal linkErrCntRst       : sl;
+   signal linkErrCnt          : slv(7 downto 0)                  := (others => '0');
    signal ltsCntRst           : sl;
    signal ltsCntEn            : sl;
    signal ltsCnt              : slv(7 downto 0)                  := (others => '0');
@@ -160,6 +162,7 @@ begin
       if pgpRxClkRst = '1' then
          curState        <= ST_LOCK_C       after TPD_G;
          stateCnt        <= (others => '0') after TPD_G;
+         linkErrCnt      <= (others => '0') after TPD_G;
          ltsCnt          <= (others => '0') after TPD_G;
          intRxLinkReady  <= '0'             after TPD_G;
          intRxPolarity   <= (others => '0') after TPD_G;
@@ -190,8 +193,10 @@ begin
             -- Link error generation
             if (dly1RxDispErr /= 0 or dly1RxDecErr /= 0) and intRxLinkReady = '1' then
                intRxLinkError <= '1' after TPD_G;
+               linkErrCntRst  <= '0' after TPD_G;
             else
                intRxLinkError <= '0' after TPD_G;
+               linkErrCntRst  <= '1' after TPD_G;
             end if;
 
             -- Link error edge detection
@@ -213,6 +218,13 @@ begin
                stateCnt <= stateCnt + 1 after TPD_G;
             end if;
 
+            -- Link Error Counter
+            if linkErrCntRst = '1' then
+               linkErrCnt <= (others => '0') after TPD_G;
+            else
+               linkErrCnt <= linkErrCnt + 1 after TPD_G;
+            end if;
+
             -- LTS Counter
             if ltsCntRst = '1' then
                ltsCnt <= (others => '0') after TPD_G;
@@ -226,7 +238,7 @@ begin
 
 
 -- Link control state machine
-   process (curState, stateCnt, ltsCnt, rxDetectLts, rxDetectLtsOk,
+   process (curState, stateCnt, linkErrCnt, ltsCnt, rxDetectLts, rxDetectLtsOk,
             rxDetectInvert, intRxPolarity, phyRxReady, dly1RxDecErr, dly1RxDispErr)
    begin
       case curState is
@@ -395,6 +407,11 @@ begin
                   nxtState    <= curState;
                   stateCntRst <= '1';
                end if;
+
+            -- Check to see if there have been 3 link errors in a row
+            elsif linkErrCnt(1 downto 0) = x"3" then
+               nxtState    <= ST_RESET_C;
+               stateCntRst <= '1';
 
             -- Link is down after long period without seeing a LTS
             -- Min spacing of LTS is 2 Cells = 2 * 256 = 512
