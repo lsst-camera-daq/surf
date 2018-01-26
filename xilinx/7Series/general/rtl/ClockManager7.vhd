@@ -2,7 +2,7 @@
 -- File       : ClockManager7.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2014-10-28
--- Last update: 2016-08-24
+-- Last update: 2018-01-25
 -------------------------------------------------------------------------------
 -- Description: A wrapper over MMCM/PLL to avoid coregen use.
 -------------------------------------------------------------------------------
@@ -302,8 +302,10 @@ begin
    end generate OutBufgGen;
 
    NoOutBufgGen : if (not OUTPUT_BUFG_G) generate
-      clkOutLoc <= clkOutMmcm;
-      clkOut    <= clkOutLoc;
+      ClkOutGen : for i in NUM_CLOCKS_G-1 downto 0 generate
+         clkOutLoc(i) <= clkOutMmcm(i);
+         clkOut(i)    <= clkOutLoc(i);
+      end generate;
    end generate NoOutBufgGen;
 
    locked <= lockedLoc;
