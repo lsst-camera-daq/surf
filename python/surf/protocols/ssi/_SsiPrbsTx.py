@@ -36,7 +36,7 @@ class SsiPrbsTx(pr.Device):
             offset       =  0x00,
             bitSize      =  1,
             bitOffset    =  0x00,
-            base         = pr.UInt,
+            base         = pr.Bool,
             mode         = "RW",
         ))
 
@@ -46,7 +46,7 @@ class SsiPrbsTx(pr.Device):
             offset       =  0x00,
             bitSize      =  1,
             bitOffset    =  0x01,
-            base         = pr.UInt,
+            base         = pr.Bool,
             mode         = "RW",
         ))
 
@@ -58,6 +58,7 @@ class SsiPrbsTx(pr.Device):
             bitOffset    =  0x02,
             base         = pr.UInt,
             mode         = "RO",
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -68,16 +69,7 @@ class SsiPrbsTx(pr.Device):
             bitOffset    =  0x03,
             base         = pr.UInt,
             mode         = "RO",
-        ))
-
-        self.add(pr.RemoteVariable(    
-            name         = "OneShot",
-            description  = "",
-            offset       =  0x00,
-            bitSize      =  1,
-            bitOffset    =  0x04,
-            base         = pr.UInt,
-            mode         = "WO",
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -86,7 +78,7 @@ class SsiPrbsTx(pr.Device):
             offset       =  0x00,
             bitSize      =  1,
             bitOffset    =  0x05,
-            base         = pr.UInt,
+            base         = pr.Bool,
             mode         = "RW",
         ))
 
@@ -128,6 +120,7 @@ class SsiPrbsTx(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RO",
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -138,6 +131,7 @@ class SsiPrbsTx(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RO",
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -148,12 +142,16 @@ class SsiPrbsTx(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RO",
+            pollInterval = 1,
         ))
 
-        ##############################
-        # Commands
-        ##############################
-
-        @self.command(name="C_OneShot", description="",)
-        def C_OneShot():        
-            self.OneShot.set(1)
+        self.add(pr.RemoteCommand(    
+            name         = "OneShot",
+            description  = "",
+            offset       =  0x18,
+            bitSize      =  1,
+            bitOffset    =  0,
+            base         = pr.UInt,
+            function     = pr.BaseCommand.touchOne
+        ))
+        

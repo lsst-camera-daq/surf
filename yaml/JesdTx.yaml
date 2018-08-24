@@ -14,7 +14,7 @@ JesdTx: &JesdTx
   class: MMIODev
   configPrio: 1
   description: JESD TX Module
-  size: 0x200
+  size: 0x400
   metadata:
     numTxLanes: &numTxLanes 8
   #########
@@ -148,6 +148,33 @@ JesdTx: &JesdTx
       sizeBits: *numTxLanes
       mode: RW
       description: "Mask Enable the DAC data inversion. 1-Inverted, 0-normal."
+    #########################################################
+    PowerDown:   
+      at:
+        offset: 0x24
+      class: IntField
+      name: PowerDown
+      sizeBits: *numTxLanes
+      mode: RW
+      description: "Power Down Mask 1-PowerDown, 0-normal."    
+    #########################################################
+    SysRefPeriodmin:   
+      at:
+        offset: 0x28
+      class: IntField
+      name: SysRefPeriodmin
+      sizeBits: 16
+      mode: RO
+      description: "SysRef Period min"   
+    #########################################################
+    SysRefPeriodmax:   
+      at:
+        offset: 0x2A
+      class: IntField
+      name: SysRefPeriodmax
+      sizeBits: 16
+      mode: RO
+      description: "SysRef Period max"         
     #########################################################       
     GTReady:
       at:
@@ -281,7 +308,43 @@ JesdTx: &JesdTx
       sizeBits: 32
       mode: RO
       description: "StatusValidCnt[31:0]. Shows stability of JESD lanes. Counts number of JESD re-syncronisations."
-    #########################################################    
+    #########################################################     
+    TxDiffCtrl:
+      at:
+        offset: 0x200
+        stride: 4
+        nelms: *numTxLanes
+      class: IntField
+      name: TxDiffCtrl
+      sizeBits: 8
+      lsBit: 0
+      mode: RW
+      description: "TX diff. swing control"
+    #########################################################
+    TxPostCursor:
+      at:
+        offset: 0x201
+        stride: 4
+        nelms: *numTxLanes
+      class: IntField
+      name: TxPostCursor
+      sizeBits: 8
+      lsBit: 0
+      mode: RW
+      description: "TX post cursor control"
+    #########################################################
+    TxPreCursor:
+      at:
+        offset: 0x202
+        stride: 4
+        nelms: *numTxLanes
+      class: IntField
+      name: TxPreCursor
+      sizeBits: 8
+      lsBit: 0
+      mode: RW
+      description: "TX pre cursor control"
+    #########################################################
     ClearTxStatus:
       name: ClearTxStatus
       class: SequenceCommand

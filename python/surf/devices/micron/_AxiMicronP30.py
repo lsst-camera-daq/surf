@@ -21,15 +21,21 @@ import pyrogue as pr
 from surf.misc._mcsreader import *
 import click
 import time
+import datetime
 
 class AxiMicronP30(pr.Device):
     def __init__(self,       
             name        = "AxiMicronP30",
             description = "AXI-Lite Micron P30 PROM",
             **kwargs):
-        super().__init__(name=name, description=description, **kwargs)
+        super().__init__(
+            name        = name, 
+            description = description, 
+            size        = (0x1 << 12), 
+            **kwargs)
         
         self._mcs = McsReader()        
+        self._progDone = False 
         
         ##############################
         # Variables
@@ -47,6 +53,7 @@ class AxiMicronP30(pr.Device):
         def LoadMcsFile(arg):
             
             click.secho(('LoadMcsFile: %s' % arg), fg='green')
+            self._progDone = False 
             
             # Start time measurement for profiling
             start = time.time()
@@ -56,6 +63,9 @@ class AxiMicronP30(pr.Device):
             
             # Open the MCS file
             self._mcs.open(arg)                                           
+
+            # print(f' startAddr: {hex(self._mcs.startAddr)}')
+            # print(f' endAddr: {hex(self._mcs.endAddr)}')            
             
             # Erase the PROM
             self.eraseProm()
@@ -69,16 +79,17 @@ class AxiMicronP30(pr.Device):
             # End time measurement for profiling
             end = time.time()
             elapsed = end - start
-            click.secho(('LoadMcsFile() took %d seconds' % int(elapsed)), fg='green')
+            click.secho('LoadMcsFile() took %s to program the PROM' % datetime.timedelta(seconds=int(elapsed)), fg='green')
             
             # Add a power cycle reminder
+            self._progDone = True
             click.secho(
                 "\n\n\
                 ***************************************************\n\
                 ***************************************************\n\
                 The MCS data has been written into the PROM.       \n\
                 To reprogram the FPGA with the new PROM data,      \n\
-                a IPROG CMD, reboot, or power cycle is be required.\n\
+                a IPROG CMD or power cycle is be required.\n\
                 ***************************************************\n\
                 ***************************************************\n\n"\
                 , bg='green',
@@ -86,7 +97,7 @@ class AxiMicronP30(pr.Device):
    
     def eraseProm(self):
         # Set the starting address index
-        address    = self._mcs.startAddr        
+        address    = self._mcs.startAddr >> 1        
         # Assume the smallest block size of 16-kword/block
         ERASE_SIZE = 0x4000 
         # Setup the status bar
@@ -100,7 +111,7 @@ class AxiMicronP30(pr.Device):
                 # Increment by one block
                 address += ERASE_SIZE
         # Check the corner case
-        if ( address<self._mcs.endAddr ): 
+        if ( address< (self._mcs.endAddr>>1) ): 
             self._eraseCmd(address)         
 
     # Erase Command
@@ -156,26 +167,26 @@ class AxiMicronP30(pr.Device):
                     # Check for the last byte
                     if ( cnt == 256 ):
                         # Write burst data
-                        self._rawWrite(address=0x400, data=dataArray)
+                        self._rawWrite(offset=0x400, data=dataArray)
                         # Start a burst transfer
-                        self._rawWrite(0x84,0x7FFFFFFF&addr)                           
+                        self._rawWrite(offset=0x84, data=0x7FFFFFFF&addr)                           
             # Check for leftover data
             if (cnt != 256):
                 # Fill the rest of the data array with ones
                 for i in range(cnt, 256):
                     dataArray[i] = 0xFFFF
                 # Write burst data
-                self._rawWrite(address=0x400, data=dataArray)
+                self._rawWrite(offset=0x400, data=dataArray)
                 # Start a burst transfer
-                self._rawWrite(0x84,0x7FFFFFFF&addr)                  
+                self._rawWrite(offset=0x84, data=0x7FFFFFFF&addr)                  
             # Close the status bar
             bar.update(self._mcs.size)  
 
     def verifyProm(self):     
         # Set the data bus 
-        self._rawWrite(0x0,0xFFFFFFFF)
+        self._rawWrite(offset=0x0, data=0xFFFFFFFF)
         # Set the block transfer size
-        self._rawWrite(0x80,0xFF)
+        self._rawWrite(offset=0x80, data=0xFF)
         # Setup the status bar
         with click.progressbar(
             length  = self._mcs.size,
@@ -191,7 +202,7 @@ class AxiMicronP30(pr.Device):
                         # Throttle down printf rate
                         bar.update(0x1FF)
                         # Start a burst transfer
-                        self._rawWrite(0x84,0x80000000|addr)
+                        self._rawWrite(offset=0x84, data=0x80000000|addr)
                         # Get the data
                         dataArray = self._rawRead(offset=0x400,numWords=256)  
                 else:
@@ -209,15 +220,15 @@ class AxiMicronP30(pr.Device):
     # Generic FLASH write Command 
     def _writeToFlash(self, addr, cmd, data):
         # Set the data bus 
-        self._rawWrite(0x0, ((cmd&0xFFFF)<< 16) | (data&0xFFFF))
+        self._rawWrite(offset=0x0, data=((cmd&0xFFFF)<< 16) | (data&0xFFFF))
         # Set the address bus and initiate the transfer
-        self._rawWrite(0x4,addr&0x7FFFFFFF)   
+        self._rawWrite(offset=0x4,data=addr&0x7FFFFFFF)   
         
     # Generic FLASH read Command
     def _readFromFlash(self, addr, cmd):  
         # Set the data bus 
-        self._rawWrite(0x0, ((cmd&0xFFFF)<< 16) | 0xFF)    
+        self._rawWrite(offset=0x0, data=((cmd&0xFFFF)<< 16) | 0xFF)    
         # Set the address
-        self._rawWrite(0x4,addr|0x80000000)  
+        self._rawWrite(offset=0x4, data=addr|0x80000000)  
         # Get the read data 
         return (self._rawRead(offset=0x8)&0xFFFF) 

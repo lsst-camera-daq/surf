@@ -2,7 +2,7 @@
 -- File       : SaltTx.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2015-09-01
--- Last update: 2015-09-22
+-- Last update: 2018-01-11
 -------------------------------------------------------------------------------
 -- Description: SALT TX Engine Module
 -------------------------------------------------------------------------------
@@ -37,10 +37,12 @@ entity SaltTx is
       sAxisMaster : in  AxiStreamMasterType;
       sAxisSlave  : out AxiStreamSlaveType;
       -- GMII Interface
-      txEn        : out sl;
-      txData      : out slv(7 downto 0);
       clk         : in  sl;
-      rst         : in  sl);
+      rst         : in  sl;
+      txPktSent   : out sl;
+      txEofeSent  : out sl;
+      txEn        : out sl;
+      txData      : out slv(7 downto 0));
 end SaltTx;
 
 architecture rtl of SaltTx is
@@ -54,24 +56,25 @@ architecture rtl of SaltTx is
       LENGTH_S,
       MOVE_S,
       CHECKSUM_S,
-      FOOTER_S); 
+      FOOTER_S);
 
    type RegType is record
       flushBuffer : sl;
       sof         : sl;
       eof         : sl;
       eofe        : sl;
-      gapCnt      : natural range 0 to INTER_GAP_SIZE_C;
+      txPktSent   : sl;
+      txEofeSent  : sl;
       seqCnt      : slv(7 downto 0);
       tDest       : slv(7 downto 0);
       cnt         : slv(15 downto 0);
+      size        : slv(15 downto 0);
       length      : slv(15 downto 0);
       checksum    : slv(31 downto 0);
       txMaster    : AxiStreamMasterType;
       rxSlave     : AxiStreamSlaveType;
       sMaster     : AxiStreamMasterType;
       mSlave      : AxiStreamSlaveType;
-      gmiiSlave   : AxiStreamSlaveType;
       state       : StateType;
    end record RegType;
    constant REG_INIT_C : RegType := (
@@ -79,32 +82,31 @@ architecture rtl of SaltTx is
       sof         => '0',
       eof         => '0',
       eofe        => '0',
-      gapCnt      => 0,
+      txPktSent   => '0',
+      txEofeSent  => '0',
       seqCnt      => (others => '0'),
       tDest       => (others => '0'),
       cnt         => (others => '0'),
+      size        => (others => '0'),
       length      => (others => '0'),
       checksum    => (others => '0'),
       txMaster    => AXI_STREAM_MASTER_INIT_C,
       rxSlave     => AXI_STREAM_SLAVE_INIT_C,
       sMaster     => AXI_STREAM_MASTER_INIT_C,
       mSlave      => AXI_STREAM_SLAVE_INIT_C,
-      gmiiSlave   => AXI_STREAM_SLAVE_INIT_C,
-      state       => IDLE_S);      
+      state       => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
-   signal rxMaster   : AxiStreamMasterType;
-   signal rxSlave    : AxiStreamSlaveType;
-   signal sMaster    : AxiStreamMasterType;
-   signal sSlave     : AxiStreamSlaveType;
-   signal mMaster    : AxiStreamMasterType;
-   signal mSlave     : AxiStreamSlaveType;
-   signal txMaster   : AxiStreamMasterType;
-   signal txSlave    : AxiStreamSlaveType;
-   signal gmiiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal gmiiSlave  : AxiStreamSlaveType;
+   signal rxMaster : AxiStreamMasterType;
+   signal rxSlave  : AxiStreamSlaveType;
+   signal sMaster  : AxiStreamMasterType;
+   signal sSlave   : AxiStreamSlaveType;
+   signal mMaster  : AxiStreamMasterType;
+   signal mSlave   : AxiStreamSlaveType;
+   signal txMaster : AxiStreamMasterType;
+   signal txSlave  : AxiStreamSlaveType;
 
 begin
 
@@ -124,7 +126,7 @@ begin
          FIFO_PAUSE_THRESH_G => ((2**4)-2),
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_G,
-         MASTER_AXI_CONFIG_G => SSI_SALT_CONFIG_C)            
+         MASTER_AXI_CONFIG_G => SSI_SALT_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => sAxisClk,
@@ -152,7 +154,7 @@ begin
          FIFO_ADDR_WIDTH_G   => 9,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => SSI_SALT_CONFIG_C,
-         MASTER_AXI_CONFIG_G => SSI_SALT_CONFIG_C)            
+         MASTER_AXI_CONFIG_G => SSI_SALT_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => clk,
@@ -163,11 +165,11 @@ begin
          mAxisClk    => clk,
          mAxisRst    => r.flushBuffer,
          mAxisMaster => mMaster,
-         mAxisSlave  => mSlave);            
+         mAxisSlave  => mSlave);
 
-
-   comb : process (gmiiMaster, mMaster, r, rst, rxMaster, sSlave, txSlave) is
-      variable v : RegType;
+   comb : process (mMaster, r, rst, rxMaster, sSlave, txSlave) is
+      variable v     : RegType;
+      variable tKeep : slv(15 downto 0);
    begin
       -- Latch the current value
       v := r;
@@ -187,6 +189,9 @@ begin
          v.sMaster.tUser  := (others => '0');
       end if;
 
+      -- Update the variable
+      tKeep := x"000" & rxMaster.tKeep(3 downto 0);
+
       -- State Machine
       case r.state is
          ----------------------------------------------------------------------
@@ -196,7 +201,10 @@ begin
             v.sof         := '0';
             v.eof         := '0';
             v.eofe        := '0';
+            v.txPktSent   := '0';
+            v.txEofeSent  := '0';
             v.length      := (others => '0');
+            v.size        := (others => '0');
             v.checksum    := (others => '0');
             v.cnt         := (others => '0');
             -- Check for data
@@ -226,8 +234,9 @@ begin
                v.sMaster        := rxMaster;
                -- Mask off tLast for intergap monitoring
                v.sMaster.tLast  := '0';
-               -- Increment the counter
-               v.length         := r.length + 1;
+               -- Increment the counters
+               v.length         := r.length + getTKeep(tKeep);
+               v.size           := r.size + 1;
                -- Check for EOF
                if rxMaster.tLast = '1' then
                   -- Set the flags
@@ -235,7 +244,7 @@ begin
                   v.eofe  := ssiGetUserEofe(SSI_SALT_CONFIG_C, rxMaster);
                   -- Next state
                   v.state := PREAMBLE_S;
-               elsif v.length = SALT_MAX_WORDS_C then
+               elsif v.size = SALT_MAX_WORDS_C then
                   -- Next state
                   v.state := PREAMBLE_S;
                end if;
@@ -293,15 +302,16 @@ begin
             -- Check for valid data
             if (mMaster.tValid = '1') and (v.txMaster.tValid = '0') then
                -- Accept the data
-               v.mSlave.tReady := '1';
+               v.mSlave.tReady               := '1';
                -- Move the data
-               v.txMaster      := mMaster;
+               v.txMaster.tValid             := '1';
+               v.txMaster.tdata(31 downto 0) := mMaster.tdata(31 downto 0);
                -- Update checksum
-               v.checksum      := r.checksum + mMaster.tData(31 downto 0);
+               v.checksum                    := r.checksum + mMaster.tData(31 downto 0);
                -- Increment the counter
-               v.cnt           := r.cnt + 1;
-               -- Check the length
-               if v.cnt = r.length then
+               v.cnt                         := r.cnt + 1;
+               -- Check the size
+               if v.cnt = r.size then
                   -- Flush the buffer
                   v.flushBuffer := '1';
                   -- Next state
@@ -324,16 +334,17 @@ begin
             if (v.txMaster.tValid = '0') then
                -- Write the footer
                v.txMaster.tValid := '1';
-               -- Insert tLast for intergap monitoring
                v.txMaster.tLast  := '1';
                -- Check for EOF
                if r.eof = '0' then
                   v.txMaster.tData(31 downto 0) := EOC_C;
                else
+                  v.txPktSent := '1';
                   if r.eofe = '0' then
                      v.txMaster.tData(31 downto 0) := EOF_C;
                   else
                      v.txMaster.tData(31 downto 0) := EOFE_C;
+                     v.txEofeSent                  := '1';
                   end if;
                end if;
                -- Next state
@@ -341,24 +352,10 @@ begin
             end if;
       ----------------------------------------------------------------------
       end case;
-
-      -- Check the current state of gmiiSlave
-      if r.gmiiSlave.tReady = '0' then
-         -- Check the intergap counter
-         if r.gapCnt = INTER_GAP_SIZE_C then
-            -- Set the flag
-            v.gmiiSlave.tReady := '1';
-         else
-            v.gapCnt := r.gapCnt + 1;
-         end if;
-      else
-         -- Check for GMII tLast
-         if (gmiiMaster.tValid = '1') and (gmiiMaster.tLast = '1') then
-            -- Reset the flag and counter
-            v.gmiiSlave.tReady := '0';
-            v.gapCnt           := 0;
-         end if;
-      end if;
+      
+      -- Combinatorial outputs before the reset
+      mSlave  <= v.mSlave;
+      rxSlave <= v.rxSlave;
 
       -- Reset
       if (rst = '1') then
@@ -368,12 +365,11 @@ begin
       -- Register the variable for next clock cycle
       rin <= v;
 
-      -- Outputs        
-      mSlave    <= v.mSlave;
-      sMaster   <= r.sMaster;
-      rxSlave   <= v.rxSlave;
-      txMaster  <= r.txMaster;
-      gmiiSlave <= r.gmiiSlave;
+      -- Registered Outputs 
+      sMaster    <= r.sMaster;
+      txMaster   <= r.txMaster;
+      txPktSent  <= r.txPktSent;
+      txEofeSent <= r.txEofeSent;
 
    end process comb;
 
@@ -384,35 +380,18 @@ begin
       end if;
    end process seq;
 
-   FIFO_TX : entity work.AxiStreamFifoV2
+   U_TxResize : entity work.SaltTxResize
       generic map (
-         -- General Configurations
-         TPD_G               => TPD_G,
-         PIPE_STAGES_G       => 0,
-         SLAVE_READY_EN_G    => true,
-         VALID_THOLD_G       => 1,
-         -- FIFO configurations
-         BRAM_EN_G           => true,
-         USE_BUILT_IN_G      => false,
-         GEN_SYNC_FIFO_G     => true,
-         CASCADE_SIZE_G      => 1,
-         FIFO_ADDR_WIDTH_G   => 9,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => SSI_SALT_CONFIG_C,
-         MASTER_AXI_CONFIG_G => SSI_GMII_CONFIG_C)            
+         TPD_G => TPD_G)
       port map (
-         -- Slave Port
-         sAxisClk    => clk,
-         sAxisRst    => rst,
-         sAxisMaster => txMaster,
-         sAxisSlave  => txSlave,
-         -- Master Port
-         mAxisClk    => clk,
-         mAxisRst    => rst,
-         mAxisMaster => gmiiMaster,
-         mAxisSlave  => gmiiSlave);      
-
-   txEn   <= gmiiMaster.tValid and gmiiSlave.tReady;
-   txData <= gmiiMaster.tData(7 downto 0);
+         -- Clock and Reset
+         clk      => clk,
+         rst      => rst,
+         -- AXI Stream Interface
+         rxMaster => txMaster,
+         rxSlave  => txSlave,
+         -- GMII Interface
+         txEn     => txEn,
+         txData   => txData);
 
 end rtl;

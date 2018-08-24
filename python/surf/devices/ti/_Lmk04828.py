@@ -555,6 +555,7 @@ class Lmk04828(pr.Device):
             base         = pr.UInt,
             mode         = "RW",
             verify       = False, # Don't verify because changes during JesdReset() JesdInit() commands
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -655,6 +656,7 @@ class Lmk04828(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -665,6 +667,7 @@ class Lmk04828(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -1055,6 +1058,7 @@ class Lmk04828(pr.Device):
             bitOffset    =  0x05,
             base         = pr.UInt,
             mode         = "RW",
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -1065,6 +1069,7 @@ class Lmk04828(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -1076,6 +1081,7 @@ class Lmk04828(pr.Device):
             base         = pr.UInt,
             mode         = "RW",
             verify       = False, # Don't verify because changes during JesdReset() JesdInit() commands
+            overlapEn    = True,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -1137,6 +1143,16 @@ class Lmk04828(pr.Device):
             base         = pr.UInt,
             mode         = "RO",
         ))
+        
+        self.add(pr.RemoteVariable(    
+            name         = "POWER_DOWN",
+            description  = "POWER_DOWN",
+            offset       =  0x08,
+            bitSize      =  1,
+            bitOffset    =  0x00,
+            base         = pr.UInt,
+            mode         = "RW",
+        ))        
 
         self.add(pr.RemoteVariable(    
             name         = "LmkReg_0x017D",
@@ -1282,13 +1298,19 @@ class Lmk04828(pr.Device):
             
         @self.command(description="Powerdown the sysref lines",)
         def PwrDwnSysRef(): 
-            # print ( "PwrDwnSysRef()" )
             self.EnableSysRef.set(0)        
 
         @self.command(description="Powerup the sysref lines",)
         def PwrUpSysRef(): 
-            # print ( "PwrUpSysRef()" )
-            self.EnableSysRef.set(3)                
+            self.EnableSysRef.set(3)     
+
+        @self.command(description="1: Powerdown",)
+        def PwrDwnLmkChip(): 
+            self.POWER_DOWN.set(1)       
+
+        @self.command(description="0: Normal Operation",)
+        def PwrUpLmkChip(): 
+            self.POWER_DOWN.set(0)                 
             
         @self.command(description="Synchronize LMK internal counters. Warning this function will power off and power on all the system clocks",)
         def Init(): 

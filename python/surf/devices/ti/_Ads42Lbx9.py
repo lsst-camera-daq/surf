@@ -28,6 +28,7 @@ class Ads42Lbx9Config(pr.Device):
         offset      =  0x00,
         hidden      =  False,
         expand      =  True,
+        enabled     =  True,
     ):
         super().__init__(
             name        = name,
@@ -36,6 +37,7 @@ class Ads42Lbx9Config(pr.Device):
             offset      = offset,
             hidden      = hidden,
             expand      = expand,
+            enabled     = enabled,
         )
 
         ##############################
@@ -50,6 +52,7 @@ class Ads42Lbx9Config(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            verify       = False,
         ))
         
         self.add(pr.RemoteVariable(    
@@ -100,6 +103,7 @@ class Ads42Lbx9Config(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            verify       = False,
         ))
 
         self.add(pr.RemoteVariable(    
@@ -210,6 +214,7 @@ class Ads42Lbx9Config(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
+            verify       = False,
         ))
         
         self.add(pr.RemoteVariable(    
@@ -230,6 +235,7 @@ class Ads42Lbx9Readout(pr.Device):
         offset      =  0x00,
         hidden      =  False,
         expand      =  True,
+        enabled     =  True,
     ):
         super().__init__(
             name        = name,
@@ -238,6 +244,7 @@ class Ads42Lbx9Readout(pr.Device):
             offset      = offset,
             hidden      = hidden,
             expand      = expand,
+            enabled     = enabled,
         )
 
         ##############################
@@ -254,6 +261,7 @@ class Ads42Lbx9Readout(pr.Device):
             number       =  8,
             stride       =  4,            
             mode         = "RW",
+            verify       = False,
         )
 
         self.addRemoteVariables(    
@@ -266,6 +274,7 @@ class Ads42Lbx9Readout(pr.Device):
             number       =  8,
             stride       =  4,            
             mode         = "RW",
+            verify       = False,
         )
         
         self.addRemoteVariables(    
@@ -292,7 +301,7 @@ class Ads42Lbx9Readout(pr.Device):
             mode         = "RO",
         )
                         
-        self.addRemoteVariables(    
+        self.add(pr.RemoteVariable(    
             name         = "DMode",
             description  = "DMode",
             offset       =  0x240,
@@ -300,4 +309,24 @@ class Ads42Lbx9Readout(pr.Device):
             bitOffset    =  0x00,
             base         = pr.UInt,
             mode         = "RW",
-        )
+        ))
+        
+        self.add(pr.RemoteVariable(    
+            name         = "Invert",
+            description  = "Invert",
+            offset       =  0x244,
+            bitSize      =  2,
+            bitOffset    =  0x00,
+            base         = pr.UInt,
+            mode         = "RW",
+        ))
+        
+        self.add(pr.RemoteVariable(    
+            name         = "Convert",
+            description  = "Convert",
+            offset       =  0x248,
+            bitSize      =  2,
+            bitOffset    =  0x00,
+            base         = pr.UInt,
+            mode         = "RW",
+        ))

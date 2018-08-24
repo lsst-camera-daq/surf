@@ -2,7 +2,7 @@
 -- File       : Pgp2bGtp7FixedLat.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2013-06-29
--- Last update: 2016-12-16
+-- Last update: 2018-01-08
 -------------------------------------------------------------------------------
 -- Description: Gth7 Fixed Latency Module
 -------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ use UNISIM.VCOMPONENTS.all;
 entity Pgp2bGtp7FixedLat is
    generic (
       TPD_G : time := 1 ns;
-
+      COMMON_CLK_G          : boolean              := false;-- set true if (stableClk = axilClk)
       ----------------------------------------------------------------------------------------------
       -- GT Settings
       ----------------------------------------------------------------------------------------------
@@ -55,6 +55,7 @@ entity Pgp2bGtp7FixedLat is
       TX_OUTCLK_SRC_G  : string  := "PLLREFCLK";
       TX_PHASE_ALIGN_G : string  := "MANUAL";
       -- Configure PLL sources
+      DYNAMIC_QPLL_G   : boolean := false; 
       TX_PLL_G         : string  := "PLL0";
       RX_PLL_G         : string  := "PLL1";
 
@@ -64,7 +65,6 @@ entity Pgp2bGtp7FixedLat is
       VC_INTERLEAVE_G   : integer              := 0;      -- No interleave Frames
       PAYLOAD_CNT_TOP_G : integer              := 7;      -- Top bit for payload counter
       NUM_VC_EN_G       : integer range 1 to 4 := 4;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)      := AXI_RESP_DECERR_C;
       TX_POLARITY_G     : sl                   := '0';
       RX_POLARITY_G     : sl                   := '0';
       TX_ENABLE_G       : boolean              := true;   -- Enable TX direction
@@ -72,6 +72,8 @@ entity Pgp2bGtp7FixedLat is
    port (
       -- GT Clocking
       stableClk        : in  sl;        -- GT needs a stable clock to "boot up"
+      qPllRxSelect     : in  slv(1 downto 0) := "00";
+      qPllTxSelect     : in  slv(1 downto 0) := "00";      
       gtQPllOutRefClk  : in  slv(1 downto 0) := "00";     -- Signals from QPLLs
       gtQPllOutClk     : in  slv(1 downto 0) := "00";
       gtQPllLock       : in  slv(1 downto 0) := "00";
@@ -121,6 +123,7 @@ entity Pgp2bGtp7FixedLat is
       txPreCursor     : in  slv(4 downto 0)        := (others => '0');
       txPostCursor    : in  slv(4 downto 0)        := (others => '0');
       txDiffCtrl      : in  slv(3 downto 0)        := "1000";
+      drpOverride     : in  sl                     := '0';
       -- AXI-Lite Interface 
       axilClk         : in  sl                     := '0';
       axilRst         : in  sl                     := '0';
@@ -262,6 +265,7 @@ begin
          RXCDR_CFG_G           => RXCDR_CFG_G,
          RXLPM_INCM_CFG_G      => RXLPM_INCM_CFG_G,
          RXLPM_IPCM_CFG_G      => RXLPM_IPCM_CFG_G,
+         DYNAMIC_QPLL_G        => DYNAMIC_QPLL_G,
          TX_PLL_G              => TX_PLL_G,
          RX_PLL_G              => RX_PLL_G,
          TX_EXT_DATA_WIDTH_G   => 16,
@@ -302,6 +306,8 @@ begin
          )
       port map (
          stableClkIn      => stableClk,
+         qPllRxSelect     => qPllRxSelect,
+         qPllTxSelect     => qPllTxSelect,
          qPllRefClkIn     => gtQPllOutRefClk,
          qPllClkIn        => gtQPllOutClk,
          qPllLockIn       => gtQPllLock,
@@ -344,6 +350,7 @@ begin
          txPreCursor      => txPreCursor,
          txPostCursor     => txPostCursor,
          txDiffCtrl       => txDiffCtrl,
+         drpOverride      => drpOverride,
          drpGnt           => drpGnt,
          drpRdy           => drpRdy,
          drpEn            => drpEn,
@@ -355,8 +362,7 @@ begin
    U_AxiLiteToDrp : entity work.AxiLiteToDrp
       generic map (
          TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
-         COMMON_CLK_G     => false,
+         COMMON_CLK_G     => COMMON_CLK_G,
          EN_ARBITRATION_G => true,
          TIMEOUT_G        => 4096,
          ADDR_WIDTH_G     => 9,
@@ -380,13 +386,19 @@ begin
          drpDi           => drpDi,
          drpDo           => drpDo);
 
-   U_RstSync : entity work.RstSync
-      generic map (
-         TPD_G => TPD_G)
-      port map (
-         clk      => stableClk,
-         asyncRst => axilRst,
-         syncRst  => stableRst);
+   GEN_RST : if (COMMON_CLK_G = false) generate   
+      U_RstSync : entity work.RstSync
+         generic map (
+            TPD_G => TPD_G)      
+         port map (
+            clk      => stableClk,
+            asyncRst => axilRst,
+            syncRst  => stableRst);     
+   end generate;
+   
+   BYP_RST_SYNC : if (COMMON_CLK_G = true) generate   
+      stableRst <= axilRst; 
+   end generate;   
 
 end rtl;
 

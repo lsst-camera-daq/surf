@@ -2,7 +2,7 @@
 -- File       : AxiMicronN25QReg.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2014-04-25
--- Last update: 2017-07-31
+-- Last update: 2018-06-22
 -------------------------------------------------------------------------------
 -- Description: MicronN25Q AXI-Lite Register Access
 -------------------------------------------------------------------------------
@@ -25,11 +25,12 @@ use work.AxiLitePkg.all;
 
 entity AxiMicronN25QReg is
    generic (
-      TPD_G            : time             := 1 ns;
-      MEM_ADDR_MASK_G  : slv(31 downto 0) := x"00000000";
-      AXI_CLK_FREQ_G   : real             := 200.0E+6;  -- units of Hz
-      SPI_CLK_FREQ_G   : real             := 25.0E+6;   -- units of Hz
-      AXI_ERROR_RESP_G : slv(1 downto 0)  := AXI_RESP_SLVERR_C);
+      TPD_G              : time             := 1 ns;
+      EN_PASSWORD_LOCK_G : boolean          := false;
+      PASSWORD_LOCK_G    : slv(31 downto 0) := x"DEADBEEF";
+      MEM_ADDR_MASK_G    : slv(31 downto 0) := x"00000000";
+      AXI_CLK_FREQ_G     : real             := 200.0E+6;  -- units of Hz
+      SPI_CLK_FREQ_G     : real             := 25.0E+6);  -- units of Hz
    port (
       -- FLASH Memory Ports
       csL            : out sl;
@@ -63,7 +64,6 @@ architecture rtl of AxiMicronN25QReg is
       IDLE_S,
       WORD_WRITE_S,
       WORD_READ_S,
-      WORD_READ_HOLD_S,
       SCK_LOW_S,
       SCK_HIGH_S,
       MIN_CS_WIDTH_S);
@@ -71,6 +71,7 @@ architecture rtl of AxiMicronN25QReg is
    type RegType is record
       test          : slv(31 downto 0);
       wrData        : slv(31 downto 0);
+      rdData        : slv(31 downto 0);
       addr          : slv(31 downto 0);
       addr32BitMode : sl;
       cmd           : slv(7 downto 0);
@@ -101,6 +102,7 @@ architecture rtl of AxiMicronN25QReg is
    constant REG_INIT_C : RegType := (
       test          => (others => '0'),
       wrData        => (others => '0'),
+      rdData        => (others => '0'),
       addr          => (others => '0'),
       addr32BitMode => '0',
       cmd           => (others => '0'),
@@ -205,7 +207,7 @@ begin
                         -- Next state
                         v.state := SCK_LOW_S;
                      when others =>
-                        axiWriteResp := AXI_ERROR_RESP_G;
+                        axiWriteResp := AXI_RESP_DECERR_C;
                   end case;
                end if;
                -- Send AXI-Lite response
@@ -233,7 +235,7 @@ begin
                      when x"0C" =>
                         v.axiReadSlave.rdata(7 downto 0) := r.status;
                      when others =>
-                        axiReadResp := AXI_ERROR_RESP_G;
+                        axiReadResp := AXI_RESP_DECERR_C;
                   end case;
                   -- Send AXI-Lite Response
                   axiSlaveReadResponse(v.axiReadSlave, axiReadResp);
@@ -263,37 +265,36 @@ begin
             -- Check if the RAM data is updated
             if r.rd = "00" then
                -- Set the flag
-               v.rd(0)                           := '1';
+               v.rd(0)               := '1';
                -- Shift the data
-               v.axiReadSlave.rdata(31 downto 8) := v.axiReadSlave.rdata(23 downto 0);
-               v.axiReadSlave.rdata(7 downto 0)  := ramDout;
+               v.rdData(31 downto 8) := r.rdData(23 downto 0);
+               v.rdData(7 downto 0)  := ramDout;
                -- Increment the counters
-               v.raddr                           := r.raddr + 1;
-               v.cnt                             := r.cnt + 1;
+               v.raddr               := r.raddr + 1;
+               v.cnt                 := r.cnt + 1;
                -- Check the counter size
                if r.cnt = 3 then
                   -- Reset the counter
-                  v.cnt   := (others => '0');
+                  v.cnt                := (others => '0');
+                  -- Forward the read data
+                  v.axiReadSlave.rdata := v.rdData;
+                  -- Send AXI-Lite Response
+                  axiSlaveReadResponse(v.axiReadSlave);
                   -- Next state
-                  v.state := WORD_READ_HOLD_S;
+                  v.state              := IDLE_S;
                end if;
             end if;
          ----------------------------------------------------------------------
-         when WORD_READ_HOLD_S =>
-            -- Send AXI-Lite Response
-            axiSlaveReadResponse(v.axiReadSlave);
-            -- Wait for read request to complete
-            if (axiStatus.readEnable = '0') then
-               -- Reset the counters
-               v.waddr := (others => '0');
-               v.raddr := (others => '0');
-               -- Next state
-               v.state := IDLE_S;
-            end if;
-         ----------------------------------------------------------------------
          when SCK_LOW_S =>
-            -- Assert the chip select
-            v.csL := '0';
+            -- Check for password locking
+            if(EN_PASSWORD_LOCK_G) then
+               -- Check if password write to test register
+               if(r.test = PASSWORD_LOCK_G) then
+                  v.csL := '0';
+               end if;
+            else
+               v.csL := '0';
+            end if;
             -- Serial Clock low phase
             v.sck := '0';
             -- Check if the RAM data is updated
@@ -394,7 +395,7 @@ begin
             end if;
       ----------------------------------------------------------------------
       end case;
-      
+
       if (r.state = IDLE_S) then
          -- Reset the flag
          v.busy := '0';

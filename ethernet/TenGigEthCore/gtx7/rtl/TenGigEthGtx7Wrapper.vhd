@@ -2,7 +2,7 @@
 -- File       : TenGigEthGtx7Wrapper.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2015-03-30
--- Last update: 2016-09-29
+-- Last update: 2018-01-08
 -------------------------------------------------------------------------------
 -- Description: Gtx7 Wrapper for 10GBASE-R Ethernet
 -- Note: This module supports up to a MGT QUAD of 10GigE interfaces
@@ -22,6 +22,7 @@ use ieee.std_logic_1164.all;
 use work.StdRtlPkg.all;
 use work.AxiStreamPkg.all;
 use work.AxiLitePkg.all;
+use work.EthMacPkg.all;
 use work.TenGigEthPkg.all;
 
 entity TenGigEthGtx7Wrapper is
@@ -34,7 +35,6 @@ entity TenGigEthGtx7Wrapper is
       QPLL_REFCLK_SEL_G : bit_vector                       := "001";
       -- AXI-Lite Configurations
       EN_AXI_REG_G      : boolean                          := false;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)                  := AXI_RESP_SLVERR_C;
       -- AXI Streaming Configurations
       AXIS_CONFIG_G     : AxiStreamConfigArray(3 downto 0) := (others => AXI_STREAM_CONFIG_INIT_C));
    port (
@@ -59,10 +59,16 @@ entity TenGigEthGtx7Wrapper is
       txFault             : in  slv(NUM_LANE_G-1 downto 0)                     := (others => '0');
       txDisable           : out slv(NUM_LANE_G-1 downto 0);
       -- Misc. Signals
-      extRst              : in  sl;
+      extRst              : in  sl                                             := '0';
       phyClk              : out sl;
       phyRst              : out sl;
       phyReady            : out slv(NUM_LANE_G-1 downto 0);
+      -- Transceiver Debug Interface
+      gtTxPreCursor       : in  slv(4 downto 0)                                := "00000";
+      gtTxPostCursor      : in  slv(4 downto 0)                                := "00000";
+      gtTxDiffCtrl        : in  slv(3 downto 0)                                := "1110";
+      gtRxPolarity        : in  sl                                             := '0';
+      gtTxPolarity        : in  sl                                             := '0';      
       -- MGT Clock Port (156.25 MHz or 312.5 MHz)
       gtRefClk            : in  sl                                             := '0';  -- 156.25 MHz only
       gtClkP              : in  sl                                             := '1';
@@ -130,7 +136,6 @@ begin
             TPD_G            => TPD_G,
             -- AXI-Lite Configurations
             EN_AXI_REG_G     => EN_AXI_REG_G,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
             -- AXI Streaming Configurations
             AXIS_CONFIG_G    => AXIS_CONFIG_G(i))       
          port map (
@@ -159,6 +164,12 @@ begin
             phyClk             => phyClock,
             phyRst             => phyReset,
             phyReady           => phyReady(i),
+            -- Transceiver Debug Interface
+            gtTxPreCursor      => gtTxPreCursor,
+            gtTxPostCursor     => gtTxPostCursor,
+            gtTxDiffCtrl       => gtTxDiffCtrl,
+            gtRxPolarity       => gtRxPolarity,
+            gtTxPolarity       => gtTxPolarity,          
             -- Quad PLL Ports
             qplllock           => qplllock,
             qplloutclk         => qplloutclk,

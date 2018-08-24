@@ -2,7 +2,6 @@
 -- File       : StdRtlPkg.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2013-05-01
--- Last update: 2017-05-05
 -------------------------------------------------------------------------------
 -- Description: Standard RTL Package File
 ------------------------------------------------------------------------------
@@ -21,6 +20,14 @@ use IEEE.NUMERIC_STD.all;
 use ieee.math_real.all;
 
 package StdRtlPkg is
+
+   -- Useful for pre compiler
+   constant IN_SIMULATION_C : boolean := false
+-- pragma translate_off
+   or true
+-- pragma translate_on
+   ;
+   constant IN_SYNTHESIS_C : boolean := not(IN_SIMULATION_C);
 
    -- Typing std_logic(_vector) is annoying
    subtype sl is std_logic;
@@ -55,7 +62,8 @@ package StdRtlPkg is
    function log2 (constant number    : integer) return natural;
    function bitSize (constant number : natural) return positive;
    function bitReverse (a            : slv) return slv;
-   function wordCount (number : positive; wordSize : positive := 8) return natural; 
+   function wordCount (number : positive; wordSize : positive := 8) return natural;
+   function endianSwap(vector : slv) return slv;
 
    -- Similar to python's range() function
    function list (constant start, size, step : integer) return IntegerArray;
@@ -99,12 +107,15 @@ package StdRtlPkg is
    function lfsrShift (lfsr : slv; constant taps : NaturalArray; input : sl := '0') return slv;
 
    function maximum (left, right : integer) return integer;
+   function maximum (a : IntegerArray) return integer;
    function minimum (left, right : integer) return integer;
+   function minimum (a : IntegerArray) return integer;
 
    -- One line if-then-else functions. Useful for assigning constants based on generics.
    function ite(i : boolean; t : boolean; e : boolean) return boolean;
    function ite(i : boolean; t : sl; e : sl) return sl;
    function ite(i : boolean; t : slv; e : slv) return slv;
+   function ite(i : boolean; t : bit; e : bit) return bit;
    function ite(i : boolean; t : bit_vector; e : bit_vector) return bit_vector;
    function ite(i : boolean; t : character; e : character) return character;
    function ite(i : boolean; t : string; e : string) return string;
@@ -771,6 +782,19 @@ package body StdRtlPkg is
       return ret;
    end function wordCount;
 
+   function endianSwap (vector : slv) return slv is
+      constant BYTES_C : natural := wordCount(number => vector'length, wordSize => 8);
+      variable inp : slv(BYTES_C*8-1 downto 0);
+      variable ret : slv(BYTES_C*8-1 downto 0);
+   begin
+      inp := resize(vector, BYTES_C*8);
+      
+      for i in BYTES_C-1 downto 0 loop
+         ret(7+(8*i) downto 8*i) := inp(7+(8*(7-i)) downto (8*(7-i)));
+      end loop;
+      return ret;
+   end function;
+
    function list (constant start, size, step : integer) return IntegerArray is
       variable retVar : IntegerArray(0 to size-1);
    begin
@@ -1077,10 +1101,15 @@ package body StdRtlPkg is
       if (i) then return t; else return e; end if;
    end function ite;
 
-   function ite (i : boolean; t : bit_vector; e : bit_vector) return bit_vector is
+   function ite (i : boolean; t : bit; e : bit) return bit is
    begin
       if (i) then return t; else return e; end if;
    end function ite;
+
+   function ite (i : boolean; t : bit_vector; e : bit_vector) return bit_vector is
+   begin
+      if (i) then return t; else return e; end if;
+   end function ite;   
 
    function ite (i : boolean; t : character; e : character) return character is
    begin
@@ -1117,13 +1146,38 @@ package body StdRtlPkg is
       end if;
    end maximum;
 
+   function maximum (
+      a : IntegerArray)
+      return integer is
+      variable max : integer := a(a'low);
+   begin
+      for i in a'range loop
+         if (a(i) > max) then
+            max := a(i);
+         end if;
+      end loop;
+      return max;
+   end function maximum;
+
    function minimum (left, right : integer) return integer is
    begin
       if left < right then return left;
       else return right;
       end if;
    end minimum;
-
+   
+   function minimum (
+      a : IntegerArray)
+      return integer is
+      variable max : integer := a(a'low);
+   begin
+      for i in a'range loop
+         if (a(i) < max) then
+            max := a(i);
+         end if;
+      end loop;
+      return max;
+   end function minimum;
    -----------------------------
    -- conv_std_logic_vector functions
    -- without calling the STD_LOGIC_ARITH library

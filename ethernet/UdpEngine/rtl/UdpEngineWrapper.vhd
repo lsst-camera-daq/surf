@@ -2,7 +2,7 @@
 -- File       : UdpEngineWrapper.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2015-08-20
--- Last update: 2016-11-02
+-- Last update: 2017-10-18
 -------------------------------------------------------------------------------
 -- Description: Wrapper for UdpEngine
 -------------------------------------------------------------------------------
@@ -38,17 +38,18 @@ entity UdpEngineWrapper is
       CLIENT_SIZE_G       : positive        := 1;
       CLIENT_PORTS_G      : PositiveArray   := (0 => 8193);
       CLIENT_EXT_CONFIG_G : boolean         := false;
-      AXI_ERROR_RESP_G    : slv(1 downto 0) := AXI_RESP_DECERR_C;
-      -- General IPv4/ARP/DHCP Generics
+      -- General IPv4/ICMP/ARP/DHCP Generics
       DHCP_G              : boolean         := false;
-      CLK_FREQ_G          : real            := 156.25E+06;                   -- In units of Hz
+      ICMP_G              : boolean         := true;
+      ARP_G               : boolean         := true;
+      CLK_FREQ_G          : real            := 156.25E+06;  -- In units of Hz
       COMM_TIMEOUT_G      : positive        := 30;  -- In units of seconds, Client's Communication timeout before re-ARPing or DHCP discover/request
-      TTL_G               : slv(7 downto 0) := x"20";   -- IPv4's Time-To-Live (TTL)
+      TTL_G               : slv(7 downto 0) := x"20";  -- IPv4's Time-To-Live (TTL)
       VLAN_G              : boolean         := false);  -- true = VLAN support       
    port (
       -- Local Configurations
-      localMac         : in  slv(47 downto 0);      --  big-Endian configuration
-      localIp          : in  slv(31 downto 0);      --  big-Endian configuration
+      localMac         : in  slv(47 downto 0);  --  big-Endian configuration
+      localIp          : in  slv(31 downto 0);  --  big-Endian configuration
       -- Remote Configurations
       clientRemotePort : in  Slv16Array(CLIENT_SIZE_G-1 downto 0)           := (others => x"0000");
       clientRemoteIp   : in  Slv32Array(CLIENT_SIZE_G-1 downto 0)           := (others => x"00000000");
@@ -80,6 +81,7 @@ end UdpEngineWrapper;
 architecture rtl of UdpEngineWrapper is
 
    type RegType is record
+      broadcastIp      : slv(31 downto 0);
       clientRemotePort : Slv16Array(CLIENT_SIZE_G-1 downto 0);
       clientRemoteIp   : Slv32Array(CLIENT_SIZE_G-1 downto 0);
       axilReadSlave    : AxiLiteReadSlaveType;
@@ -87,6 +89,7 @@ architecture rtl of UdpEngineWrapper is
    end record;
 
    constant REG_INIT_C : RegType := (
+      broadcastIp      => (others => '0'),
       clientRemotePort => (others => (others => '0')),
       clientRemoteIp   => (others => (others => '0')),
       axilReadSlave    => AXI_LITE_READ_SLAVE_INIT_C,
@@ -112,7 +115,7 @@ architecture rtl of UdpEngineWrapper is
 begin
 
    ------------------
-   -- IPv4/ARP Engine
+   -- IPv4/ICMP/ARP Engine
    ------------------
    IpV4Engine_Inst : entity work.IpV4Engine
       generic map (
@@ -121,6 +124,8 @@ begin
          PROTOCOL_G      => (0 => UDP_C),
          CLIENT_SIZE_G   => CLIENT_SIZE_G,
          CLK_FREQ_G      => CLK_FREQ_G,
+         ICMP_G          => ICMP_G,
+         ARP_G           => ARP_G,
          VLAN_G          => VLAN_G)
       port map (
          -- Local Configurations
@@ -163,10 +168,11 @@ begin
          -- UDP ARP/DHCP Generics
          DHCP_G         => DHCP_G,
          CLK_FREQ_G     => CLK_FREQ_G,
-         COMM_TIMEOUT_G => COMM_TIMEOUT_G)  
+         COMM_TIMEOUT_G => COMM_TIMEOUT_G)
       port map (
          -- Local Configurations
          localMac         => localMac,
+         broadcastIp      => r.broadcastIp,
          localIpIn        => localIp,
          dhcpIpOut        => dhcpIp,
          -- Interface to IPV4 Engine  
@@ -195,10 +201,11 @@ begin
          ibClientSlaves   => ibClientSlaves,
          -- Clock and Reset
          clk              => clk,
-         rst              => rst);  
+         rst              => rst);
 
-   comb : process (axilReadMaster, axilWriteMaster, clientRemoteIp, clientRemotePort, dhcpIp,
-                   localMac, r, rst, serverRemoteIp, serverRemotePort) is
+   comb : process (axilReadMaster, axilWriteMaster, clientRemoteIp,
+                   clientRemotePort, dhcpIp, localMac, r, rst, serverRemoteIp,
+                   serverRemotePort) is
       variable v      : RegType;
       variable regCon : AxiLiteEndPointType;
       variable i      : natural;
@@ -220,11 +227,12 @@ begin
          axiSlaveRegisterR(regCon, toSlv((8*i)+4+2048, 12), 0, serverRemoteIp(i));  --  big-Endian configuration
       end loop;
 
+      axiSlaveRegister(regCon, x"FF0", 0, v.broadcastIp);
       axiSlaveRegisterR(regCon, x"FF4", 0, dhcpIp);
       axiSlaveRegisterR(regCon, x"FF8", 0, localMac);
 
       -- Closeout the transaction
-      axiSlaveDefault(regCon, v.axilWriteSlave, v.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, v.axilWriteSlave, v.axilReadSlave, AXI_RESP_DECERR_C);
 
       -- Synchronous Reset
       if (rst = '1') then
@@ -243,7 +251,7 @@ begin
       -- Outputs
       axilWriteSlave <= r.axilWriteSlave;
       axilReadSlave  <= r.axilReadSlave;
-      
+
    end process comb;
 
    seq : process (clk) is
@@ -252,5 +260,5 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
-   
+
 end rtl;

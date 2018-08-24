@@ -2,7 +2,7 @@
 -- File       : Pgp2bGtp7FixedLatWrapper.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2014-01-29
--- Last update: 2017-01-24
+-- Last update: 2018-01-08
 -------------------------------------------------------------------------------
 -- Description: Gtp7 Fixed Latency Wrapper
 -------------------------------------------------------------------------------
@@ -31,6 +31,7 @@ use unisim.vcomponents.all;
 entity Pgp2bGtp7FixedLatWrapper is
    generic (
       TPD_G                   : time                 := 1 ns;
+      COMMON_CLK_G            : boolean              := false;-- set true if (stableClk = axilClk)
       SIM_GTRESET_SPEEDUP_G   : boolean              := false;
       SIM_VERSION_G           : string               := "1.0";
       SIMULATION_G            : boolean              := false;
@@ -40,7 +41,6 @@ entity Pgp2bGtp7FixedLatWrapper is
       NUM_VC_EN_G             : integer range 1 to 4 := 4;
       AXIL_BASE_ADDR_G        : slv(31 downto 0)     := (others => '0');
       EXT_RST_POLARITY_G      : sl                   := '1';
-      AXIL_ERROR_RESP_G       : slv(1 downto 0)      := AXI_RESP_DECERR_C;
       TX_POLARITY_G           : sl                   := '0';
       RX_POLARITY_G           : sl                   := '0';
       TX_ENABLE_G             : boolean              := true;           -- Enable TX direction
@@ -70,6 +70,7 @@ entity Pgp2bGtp7FixedLatWrapper is
       RX_REFCLK_SRC_G         : string               := "gtClk0";
       TX_PLL_CFG_G            : Gtp7QPllCfgType      := getGtp7QPllCfg(156.25e6, 3.125e9);
       RX_PLL_CFG_G            : Gtp7QPllCfgType      := getGtp7QPllCfg(156.25e6, 3.125e9);
+      DYNAMIC_QPLL_G          : boolean              := false;
       TX_PLL_G                : string               := "PLL0";
       RX_PLL_G                : string               := "PLL0");
    port (
@@ -112,6 +113,9 @@ entity Pgp2bGtp7FixedLatWrapper is
       txPreCursor      : in  slv(4 downto 0)                  := (others => '0');
       txPostCursor     : in  slv(4 downto 0)                  := (others => '0');
       txDiffCtrl       : in  slv(3 downto 0)                  := "1000";
+      drpOverride      : in  sl                               := '0';
+      qPllRxSelect     : in  slv(1 downto 0)                  := "00";
+      qPllTxSelect     : in  slv(1 downto 0)                  := "00";          
       -- AXI-Lite Interface 
       axilClk          : in  sl                               := '0';
       axilRst          : in  sl                               := '0';
@@ -340,7 +344,6 @@ begin
    U_Gtp7QuadPll_1 : entity work.Gtp7QuadPll
       generic map (
          TPD_G                => TPD_G,
-         AXI_ERROR_RESP_G     => AXIL_ERROR_RESP_G,
          SIM_RESET_SPEEDUP_G  => SIM_GTRESET_SPEEDUP_C,
          SIM_VERSION_G        => SIM_VERSION_G,
          PLL0_REFCLK_SEL_G    => "001",
@@ -370,6 +373,7 @@ begin
    Pgp2bGtp7Fixedlat_Inst : entity work.Pgp2bGtp7FixedLat
       generic map (
          TPD_G                 => TPD_G,
+         COMMON_CLK_G          => COMMON_CLK_G,
          SIM_GTRESET_SPEEDUP_G => SIM_GTRESET_SPEEDUP_C,
          SIM_VERSION_G         => SIM_VERSION_G,
          SIMULATION_G          => SIMULATION_G,
@@ -384,12 +388,12 @@ begin
          TX_BUF_EN_G           => true,
          TX_OUTCLK_SRC_G       => ite(TX_USER_CLK_SRC_G = "txOutClk", "OUTCLKPMA", "PLLREFCLK"),
          TX_PHASE_ALIGN_G      => "MANUAL",
+         DYNAMIC_QPLL_G        => DYNAMIC_QPLL_G,
          TX_PLL_G              => TX_PLL_G,
          RX_PLL_G              => RX_PLL_G,
          VC_INTERLEAVE_G       => VC_INTERLEAVE_G,
          PAYLOAD_CNT_TOP_G     => PAYLOAD_CNT_TOP_G,
          NUM_VC_EN_G           => NUM_VC_EN_G,
-         AXI_ERROR_RESP_G      => AXIL_ERROR_RESP_G,
          TX_POLARITY_G         => TX_POLARITY_G,
          RX_POLARITY_G         => RX_POLARITY_G,
          TX_ENABLE_G           => TX_ENABLE_G,
@@ -397,6 +401,8 @@ begin
       port map (
          -- GT Clocking
          stableClk        => stableClk,
+         qPllRxSelect     => qPllRxSelect,
+         qPllTxSelect     => qPllTxSelect,         
          gtQPllOutRefClk  => qPllOutRefClk,
          gtQPllOutClk     => qPllOutClk,
          gtQPllLock       => qPllLock,
@@ -439,6 +445,7 @@ begin
          txPreCursor      => txPreCursor,
          txPostCursor     => txPostCursor,
          txDiffCtrl       => txDiffCtrl,
+         drpOverride      => drpOverride,
          -- AXI-Lite Interface 
          axilClk          => axilClk,
          axilRst          => axilRst,
@@ -498,7 +505,6 @@ begin
          TPD_G              => TPD_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => 2,
-         DEC_ERROR_RESP_G   => AXIL_ERROR_RESP_G,
          MASTERS_CONFIG_G   => genAxiLiteConfig(2, AXIL_BASE_ADDR_G, 16, 12),
          DEBUG_G            => true)
       port map (

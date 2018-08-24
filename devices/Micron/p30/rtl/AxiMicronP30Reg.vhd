@@ -2,7 +2,7 @@
 -- File       : AxiMicronP30Reg.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2014-10-21
--- Last update: 2017-07-11
+-- Last update: 2018-06-22
 -------------------------------------------------------------------------------
 -- Description: This controller is designed around the Micron PC28F FLASH IC.
 -------------------------------------------------------------------------------
@@ -28,10 +28,11 @@ use unisim.vcomponents.all;
 
 entity AxiMicronP30Reg is
    generic (
-      TPD_G            : time             := 1 ns;
-      MEM_ADDR_MASK_G  : slv(31 downto 0) := x"00000000";
-      AXI_CLK_FREQ_G   : real             := 200.0E+6;  -- units of Hz
-      AXI_ERROR_RESP_G : slv(1 downto 0)  := AXI_RESP_SLVERR_C);
+      TPD_G              : time             := 1 ns;
+      EN_PASSWORD_LOCK_G : boolean          := false;
+      PASSWORD_LOCK_G    : slv(31 downto 0) := x"DEADBEEF";
+      MEM_ADDR_MASK_G    : slv(31 downto 0) := x"00000000";
+      AXI_CLK_FREQ_G     : real             := 200.0E+6);  -- units of Hz
    port (
       -- FLASH Interface 
       flashAddr      : out slv(30 downto 0);
@@ -231,7 +232,7 @@ begin
                         -- Get the address bus
                         v.axiReadSlave.rdata(30 downto 0) := r.addr;
                      when others =>
-                        axiReadResp := AXI_ERROR_RESP_G;
+                        axiReadResp := AXI_RESP_DECERR_C;
                   end case;
                   -- Send AXI-Lite Response
                   axiSlaveReadResponse(v.axiReadSlave, axiReadResp);
@@ -293,7 +294,7 @@ begin
                            v.state   := BLOCK_WR_S;
                         end if;
                      when others =>
-                        axiWriteResp := AXI_ERROR_RESP_G;
+                        axiWriteResp := AXI_RESP_DECERR_C;
                   end case;
                end if;
                -- Send AXI-Lite response
@@ -392,7 +393,15 @@ begin
             v.state := CMD_LOW_S;
          ----------------------------------------------------------------------
          when CMD_LOW_S =>
-            v.ceL      := '0';
+            -- Check for password locking
+            if(EN_PASSWORD_LOCK_G) then
+               -- Check if password write to test register
+               if(r.test = PASSWORD_LOCK_G) then
+                  v.ceL := '0';
+               end if;
+            else
+               v.ceL := '0';
+            end if;
             v.oeL      := '1';
             v.weL      := '0';
             v.tristate := '0';
@@ -440,7 +449,15 @@ begin
             end if;
          ----------------------------------------------------------------------
          when DATA_LOW_S =>
-            v.ceL      := '0';
+            -- Check for password locking
+            if(EN_PASSWORD_LOCK_G) then
+               -- Check if password write to test register
+               if(r.test = PASSWORD_LOCK_G) then
+                  v.ceL := '0';
+               end if;
+            else
+               v.ceL := '0';
+            end if;
             v.oeL      := not(r.RnW);
             v.weL      := r.RnW;
             v.tristate := r.RnW;

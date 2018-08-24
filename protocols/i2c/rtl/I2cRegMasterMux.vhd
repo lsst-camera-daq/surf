@@ -2,7 +2,7 @@
 -- File       : I2cRegMasterMux.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2013-09-21
--- Last update: 2013-11-20
+-- Last update: 2018-06-27
 -------------------------------------------------------------------------------
 -- Description: Multiplexes access to a single I2cRegMaster module
 -- Attached devices may also lock others out in order to execute multiple
@@ -27,7 +27,6 @@ use work.StdRtlPkg.all;
 use work.I2cPkg.all;
 
 entity I2cRegMasterMux is
-   
    generic (
       TPD_G        : time                 := 1 ns;
       NUM_INPUTS_C : natural range 2 to 8 := 2);
@@ -40,7 +39,6 @@ entity I2cRegMasterMux is
       regOut    : out I2cRegMasterOutArray(0 to NUM_INPUTS_C-1);
       masterIn  : out I2cRegMasterInType;
       masterOut : in  I2cRegMasterOutType);
-
 end entity I2cRegMasterMux;
 
 architecture rtl of I2cRegMasterMux is
@@ -73,6 +71,8 @@ begin
 
       if (r.locked = '0') then
          v.sel := r.sel + 1;            -- Increment only if no channel has a lock
+      else
+         v.locked := lockReq(selInt);   -- Grant lock if requested
       end if;
 
       v.masterIn.regReq := '0';
@@ -86,6 +86,19 @@ begin
          v.regOut(selInt) := masterOut;
       end if;
 
+      -- If bus is locked and another input tries to access, respond immediately with a fail code
+      if (r.locked = '1') then
+         for i in NUM_INPUTS_C-1 downto 0 loop
+            if (regIn(i).regReq = '1' and r.sel /= i) then
+               v.regOut(i) := (
+                  regAck => '1',
+                  regFail => '1',
+                  regFailCode => "00001111",
+                  regRdData => (others => '0'));
+            end if;
+         end loop;
+      end if;
+
       if (srst = '1') then
          v := REG_INIT_C;
       end if;
@@ -94,10 +107,10 @@ begin
 
       regOut   <= r.regOut;
       masterIn <= r.masterIn;
-      
+
    end process comb;
 
-   seq : process (clk, arst) is
+   seq : process (arst, clk) is
    begin
       if (arst = '1') then
          r <= REG_INIT_C after TPD_G;
