@@ -2,7 +2,7 @@
 -- File       : Pgp2bGtx7MultiLane.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2013-06-29
--- Last update: 2018-01-08
+-- Last update: 2019-03-14
 -------------------------------------------------------------------------------
 -- Description: Gtx7 Variable Latency, multi-lane Module
 -------------------------------------------------------------------------------
@@ -50,6 +50,7 @@ entity Pgp2bGtx7MultiLane is
       PMA_RSV_G    : bit_vector := x"00018480";
       RX_OS_CFG_G  : bit_vector := "0000010000000";        -- Set by wizard
       RXCDR_CFG_G  : bit_vector := x"03000023ff40200020";  -- Set by wizard
+      RX_EQUALIZER_G : string   := "DFE";
       RXDFEXYDEN_G : sl         := '0';                    -- Set by wizard
 
       -- RX Equalizer Attributes
@@ -323,7 +324,7 @@ begin
             FTS_LANE_DESKEW_EN_G     => "FALSE",       -- Default
             RX_OS_CFG_G              => RX_OS_CFG_G,
             RXCDR_CFG_G              => RXCDR_CFG_G,
-            RX_EQUALIZER_G           => "DFE",         -- Xilinx recommends this for 8b10b
+            RX_EQUALIZER_G           => RX_EQUALIZER_G,         -- Xilinx recommends this for 8b10b
             RXDFEXYDEN_G             => RXDFEXYDEN_G,
             RX_DFE_KL_CFG2_G         => RX_DFE_KL_CFG2_G)
          port map (
