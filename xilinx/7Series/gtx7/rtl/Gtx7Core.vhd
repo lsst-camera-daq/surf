@@ -2,7 +2,7 @@
 -- File       : Gtx7Core.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2012-12-17
--- Last update: 2016-10-27
+-- Last update: 2019-09-16
 -------------------------------------------------------------------------------
 -- Description: Wrapper for Xilinx 7-series GTX primitive
 -------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ entity Gtx7Core is
       -- RX Equalizer Attributes--------------------------
       RX_EQUALIZER_G   : string     := "DFE";        -- Or "LPM"
       RX_DFE_KL_CFG2_G : bit_vector := x"3008E56A";  -- Set by wizard
-      RX_CM_TRIM_G     : bit_vector := "010";
+      RX_CM_TRIM_G     : bit_vector := "100";
       RX_DFE_LPM_CFG_G : bit_vector := x"0954";
       RXDFELFOVRDEN_G  : sl         := '1';
       RXDFEXYDEN_G     : sl         := '1'           -- This should always be 1
