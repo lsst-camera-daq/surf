@@ -112,7 +112,7 @@ begin
          GEN_SYNC_FIFO_G     => PRIM_COMMON_CLK_G,
          FIFO_ADDR_WIDTH_G   => FIFO_ADDR_WIDTH_G,
          FIFO_FIXED_THRESH_G => false,
-         CASCADE_SIZE_G      => 20,
+         CASCADE_SIZE_G      => 10,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => INT_EMAC_AXIS_CONFIG_C,
          MASTER_AXI_CONFIG_G => PRIM_CONFIG_G)
