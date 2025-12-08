@@ -80,7 +80,13 @@ async def dut_tb(dut):
     buildString = rdTxn.data.decode('utf-8')
     print( f'buildString={buildString}' )
 
-if cocotb.SIM_NAME:
+# Prevent pytest from trying to collect cocotb's TestFactory class
+TestFactory.__test__ = False
+
+# Safe SIM_NAME access for pytest collection and cocotb 2.x
+SIM_NAME = getattr(cocotb, "SIM_NAME", None)
+if SIM_NAME:
+
     factory = TestFactory(dut_tb)
     factory.generate_tests()
 
