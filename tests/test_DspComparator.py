@@ -19,8 +19,7 @@ import pytest
 import glob
 import os
 
-@cocotb.coroutine
-def dut_init(dut):
+async def dut_init(dut):
 
     # Initialize the inputs
     dut.rst.value     = 1
@@ -33,16 +32,15 @@ def dut_init(dut):
     cocotb.start_soon(Clock(dut.clk, 5.0, units='ns').start())
 
     # Wait 1 clock cycle
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     # De-assert the reset
     dut.rst.value = 0
 
     # Wait 1 clock cycle
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
-@cocotb.coroutine
-def load_value(dut, ain, bin):
+async def load_value(dut, ain, bin):
 
     # Load the values
     dut.ain.value = ain
@@ -55,26 +53,26 @@ def load_value(dut, ain, bin):
     dut.ibValid.value = 1
 
     # Wait 1 clock cycle
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     # De-assert valid flag
     dut.ibValid.value = 0
 
     # Wait for the result
     while ( dut.obValid.value != 1 ):
-        yield RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
 
     # Assert ready flag
     dut.obReady.value = 1
 
     # Wait 1 clock cycle
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
 @cocotb.test()
-def dut_tb(dut):
+async def dut_tb(dut):
 
     # Initialize the DUT
-    yield dut_init(dut)
+    await dut_init(dut)
 
     # Read the parameters back from the DUT to set up our model
     width = dut.WIDTH_G.value.integer
@@ -85,7 +83,7 @@ def dut_tb(dut):
         for bin in range(width):
 
             # Load the values
-            yield load_value(dut, ain, bin)
+            await load_value(dut, ain, bin)
 
             # Check (a = b) result
             if ((ain==bin) and (dut.eq.value != 1)) or (not (ain==bin) and (dut.eq.value == 1)):
