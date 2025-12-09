@@ -138,7 +138,13 @@ async def run_test(dut):
             assert rx_frame.tuser == test_frames[i].tuser
             assert tb.sinks[i].empty()
 
-if cocotb.SIM_NAME:
+# Prevent pytest from trying to collect cocotb's TestFactory class
+TestFactory.__test__ = False
+
+# Safe SIM_NAME access for pytest collection and cocotb 2.x
+SIM_NAME = getattr(cocotb, "SIM_NAME", None)
+if SIM_NAME:
+
     factory = TestFactory(run_test)
     factory.generate_tests()
 
