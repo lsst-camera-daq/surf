@@ -279,6 +279,15 @@ begin
                nxtRxPolarity <= (others => '0');
                nxtState      <= ST_RESET_C;
 
+            -- Terminal count without seeing a valid LTS
+            elsif stateCnt = x"FFFFF" then
+               stateCntRst   <= '1';
+               ltsCntEn      <= '0';
+               ltsCntRst     <= '1';
+               -- nxtRxPolarity <= intRxPolarity;
+               nxtRxPolarity <= (others => '0');
+               nxtState      <= ST_RESET_C;
+
             -- Decode or disparity error, clear lts count
             elsif phyRxReady = '0' or dly1RxDispErr /= 0 or dly1RxDecErr /= 0 then
                stateCntRst   <= '0';
@@ -325,15 +334,6 @@ begin
                -- nxtRxPolarity <= intRxPolarity;
                nxtRxPolarity <= (others => '0');
                nxtState      <= ST_READY_C;
-
-            -- Terminal count without seeing a valid LTS
-            elsif stateCnt = x"FFFFF" then
-               stateCntRst   <= '1';
-               ltsCntEn      <= '0';
-               ltsCntRst     <= '1';
-               -- nxtRxPolarity <= intRxPolarity;
-               nxtRxPolarity <= (others => '0');
-               nxtState      <= ST_RESET_C;
 
             -- Count cycles without LTS
             else
