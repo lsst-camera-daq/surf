@@ -290,14 +290,14 @@ begin
                   -- Assign read data
                   v.axilReadSlave.rdata(DATA_WIDTH_G-1 downto 0) := dataIn;
 
+                  -- Ack the read TXN
+                  axiSlaveReadResponse(v.axilReadSlave, AXI_RESP_OK_C);
+
                   -- Increment the counter
                   v.cnt := r.cnt + 1;
 
                -- Check if "RETURN TO WRITE" phase
                elsif (r.cnt = 6) then
-
-                  -- Ack the read TXN
-                  axiSlaveReadResponse(v.axilReadSlave, AXI_RESP_OK_C);
 
                   -- Next state
                   v.state := IDLE_S;
