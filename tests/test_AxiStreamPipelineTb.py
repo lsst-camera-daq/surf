@@ -33,7 +33,7 @@ async def dut_tb(dut):
         await RisingEdge(dut.clk)
         if dut.passed.value == 1:
             dut._log.info("DUT: Passed")
-            break
+            return  # end the test right here
         elif dut.failed.value == 1:
             dut._log.error("DUT: Failed")
             assert False
@@ -86,6 +86,7 @@ def test_AxiStreamPipelineTb(parameters):
 
         # VHDL compile arguments
         vhdl_compile_args = [
+            "--std=08",         # enable VHDL-2008
             '-fsynopsys',       # use of synopsys package "std_logic_arith" needs the -fsynopsys option
             '-frelaxed-rules',  # -frelaxed-rules option to allow IP integrator attributes
             '-fexplicit',       # When two operators are overloaded, give preference to the explicit declaration (-fexplicit)

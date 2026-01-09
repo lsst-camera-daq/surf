@@ -96,7 +96,12 @@ def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
 
-if cocotb.SIM_NAME:
+# Prevent pytest from trying to collect cocotb's TestFactory class
+TestFactory.__test__ = False
+
+# Safe SIM_NAME access for pytest collection and cocotb 2.x
+SIM_NAME = getattr(cocotb, "SIM_NAME", None)
+if SIM_NAME:
 
     #################
     # run_test_words
