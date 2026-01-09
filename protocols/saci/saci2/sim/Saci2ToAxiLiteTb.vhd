@@ -49,6 +49,12 @@ end Saci2ToAxiLiteTb;
 
 architecture mapping of Saci2ToAxiLiteTb is
 
+   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(0 downto 0) := (
+      0 => (
+         baseAddr     => x"0000_0000",
+         addrBits     => 24,
+         connectivity => x"FFFF"));
+
    signal fpgaAxilClk : sl;
    signal fpgaAxilRst : sl;
 
@@ -64,6 +70,11 @@ architecture mapping of Saci2ToAxiLiteTb is
    signal asicAxilReadSlave   : AxiLiteReadSlaveType;
    signal asicAxilWriteMaster : AxiLiteWriteMasterType;
    signal asicAxilWriteSlave  : AxiLiteWriteSlaveType;
+
+   signal memAxilReadMaster  : AxiLiteReadMasterType;
+   signal memAxilReadSlave   : AxiLiteReadSlaveType;
+   signal memAxilWriteMaster : AxiLiteWriteMasterType;
+   signal memAxilWriteSlave  : AxiLiteWriteSlaveType;
 
    signal rstL : sl;
 
@@ -165,6 +176,25 @@ begin
          axilWriteMaster => asicAxilWriteMaster,  -- [in]
          axilWriteSlave  => asicAxilWriteSlave);  -- [out]
 
+   -- AXI-Lite Crossbar is to assert non-zero for AXI-Lite bus response outside of U_MEM
+   U_XBAR : entity surf.AxiLiteCrossbar
+      generic map (
+         NUM_SLAVE_SLOTS_G  => 1,
+         NUM_MASTER_SLOTS_G => 1,
+         MASTERS_CONFIG_G   => AXIL_CONFIG_C)
+      port map (
+         axiClk              => asicAxilClk,
+         axiClkRst           => asicAxilRst,
+         -- Slave AXIL Ports
+         sAxiWriteMasters(0) => asicAxilWriteMaster,
+         sAxiWriteSlaves(0)  => asicAxilWriteSlave,
+         sAxiReadMasters(0)  => asicAxilReadMaster,
+         sAxiReadSlaves(0)   => asicAxilReadSlave,
+         -- Master AXIL Ports
+         mAxiWriteMasters(0)    => memAxilWriteMaster,
+         mAxiWriteSlaves(0)     => memAxilWriteSlave,
+         mAxiReadMasters(0)     => memAxilReadMaster,
+         mAxiReadSlaves(0)      => memAxilReadSlave);
 
    U_MEM : entity surf.AxiDualPortRam
       generic map (
@@ -174,10 +204,9 @@ begin
          -- Axi Port
          axiClk         => asicAxilClk,
          axiRst         => asicAxilRst,
-         axiReadMaster  => asicAxilReadMaster,
-         axiReadSlave   => asicAxilReadSlave,
-         axiWriteMaster => asicAxilWriteMaster,
-         axiWriteSlave  => asicAxilWriteSlave);
-
+         axiReadMaster  => memAxilReadMaster,
+         axiReadSlave   => memAxilReadSlave,
+         axiWriteMaster => memAxilWriteMaster,
+         axiWriteSlave  => memAxilWriteSlave);
 
 end mapping;
