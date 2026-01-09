@@ -276,7 +276,7 @@ begin
                   v.configTri := '1';
                   v.readWrite := '1';
                when 8 =>
-                  -- Turn on analog output driver
+                  -- Turn on digital output driver
                   v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '0';
