@@ -41,6 +41,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 1,
             bitOffset = 4,
             mode      = 'RO',
+            base      = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -49,6 +50,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 1,
             bitOffset = 5,
             mode      = 'RO',
+            base      = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -57,6 +59,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 4,
             bitOffset = 8,
             mode      = 'RO',
+            disp      = '{:d}',
         ))
 
         self.add(pr.RemoteVariable(
@@ -65,6 +68,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 4,
             bitOffset = 12,
             mode      = 'RO',
+            disp      = '{:d}',
         ))
 
         self.add(pr.RemoteVariable(
@@ -73,6 +77,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 4,
             bitOffset = 16,
             mode      = 'RO',
+            disp      = '{:d}',
         ))
 
         self.add(pr.RemoteVariable(
@@ -81,6 +86,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 8,
             bitOffset = 24,
             mode      = 'RO',
+            disp      = '{:d}',
         ))
 
         self.add(pr.RemoteVariable(
@@ -89,6 +95,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = timerWidth,
             bitOffset = 0,
             mode      = 'RW',
+            disp      = '{:d}',
         ))
 
         self.add(pr.RemoteVariable(
@@ -97,6 +104,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 1,
             bitOffset = 16,
             mode      = 'RW',
+            base      = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -105,6 +113,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 1,
             bitOffset = 17,
             mode      = 'RW',
+            base      = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -113,6 +122,7 @@ class SugoiAxiLitePixelMatrixConfig(pr.Device):
             bitSize   = 1,
             bitOffset = 18,
             mode      = 'RW',
+            base      = pr.Bool,
         ))
 
         for i in range(self.numRow):
