@@ -84,7 +84,7 @@ architecture rtl of SugoiAxiLitePixelMatrixConfig is
       globalRstL     : sl;
       cckReg         : sl;
       cckPix         : sl;
-      cnt            : natural range 0 to 7;
+      cnt            : natural range 0 to 8;
       timer          : slv(TIMER_WIDTH_G-1 downto 0);
       timerSize      : slv(TIMER_WIDTH_G-1 downto 0);
       axilReadSlave  : AxiLiteReadSlaveType;
@@ -110,8 +110,7 @@ architecture rtl of SugoiAxiLitePixelMatrixConfig is
       timerSize      => (others => '1'),
       axilReadSlave  => AXI_LITE_READ_SLAVE_INIT_C,
       axilWriteSlave => AXI_LITE_WRITE_SLAVE_INIT_C,
-      state          => IDLE_S
-      );
+      state          => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -229,14 +228,14 @@ begin
             -- Check the read phase
             case (r.cnt) is
                when 0 =>
-                  -- TRI-STATE & READ MODE
+                  -- Turn off digital output driver (both drivers disabled)
                   v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '1';
-                  v.readWrite := '0';
+                  v.readWrite := '1';
                when 1 =>
-                  -- CCK PIX HIGH
-                  v.cckPix    := '1';
+                  -- Turn on analog output driver
+                  v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '1';
                   v.readWrite := '0';
@@ -247,25 +246,37 @@ begin
                   v.configTri := '1';
                   v.readWrite := '0';
                when 3 =>
+                  -- CCK PIX HIGH
+                  v.cckPix    := '1';
+                  v.cckReg    := '0';
+                  v.configTri := '1';
+                  v.readWrite := '0';
+               when 4 =>
                   -- CCK REG HIGH
                   v.cckPix    := '1';
                   v.cckReg    := '1';
                   v.configTri := '1';
                   v.readWrite := '0';
-               when 4 =>
+               when 5 =>
                   -- SAMPLE & CCK LOW
                   v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '1';
                   v.readWrite := '0';
-               when 5 =>
+               when 6 =>
                   -- HOLD
                   v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '1';
                   v.readWrite := '0';
-               when 6 =>
-                  -- RETURN TO WRITE
+               when 7 =>
+                  -- Turn off analog output driver (both drivers disabled)
+                  v.cckPix    := '0';
+                  v.cckReg    := '0';
+                  v.configTri := '1';
+                  v.readWrite := '1';
+               when 8 =>
+                  -- Turn on digital output driver
                   v.cckPix    := '0';
                   v.cckReg    := '0';
                   v.configTri := '0';
@@ -285,19 +296,19 @@ begin
                v.timer := r.timerSize;
 
                -- Check if "SAMPLE" phase
-               if (r.cnt = 4) then
+               if (r.cnt = 5) then
 
                   -- Assign read data
                   v.axilReadSlave.rdata(DATA_WIDTH_G-1 downto 0) := dataIn;
+
+                  -- Ack the read TXN
+                  axiSlaveReadResponse(v.axilReadSlave, AXI_RESP_OK_C);
 
                   -- Increment the counter
                   v.cnt := r.cnt + 1;
 
                -- Check if "RETURN TO WRITE" phase
-               elsif (r.cnt = 6) then
-
-                  -- Ack the read TXN
-                  axiSlaveReadResponse(v.axilReadSlave, AXI_RESP_OK_C);
+               elsif (r.cnt = 8) then
 
                   -- Next state
                   v.state := IDLE_S;
