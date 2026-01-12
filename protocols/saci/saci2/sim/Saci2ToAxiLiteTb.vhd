@@ -52,7 +52,7 @@ architecture mapping of Saci2ToAxiLiteTb is
    constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(0 downto 0) := (
       0               => (
          baseAddr     => x"0000_0000",
-         addrBits     => 24,
+         addrBits     => 20,
          connectivity => x"FFFF"));
 
    signal fpgaAxilClk : sl;
@@ -198,7 +198,7 @@ begin
 
    U_MEM : entity surf.AxiDualPortRam
       generic map (
-         ADDR_WIDTH_G => 22,
+         ADDR_WIDTH_G => 18,  -- 18 bits of word address (20 bits of byte address)
          DATA_WIDTH_G => 32)
       port map (
          -- Axi Port

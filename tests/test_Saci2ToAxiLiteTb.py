@@ -103,6 +103,19 @@ async def run_test_words(dut):
             assert rsp.resp == AxiResp.OKAY
             assert rsp.data == test_data
 
+    ########################################################################
+    # Negative test: access an unmapped/invalid AXI-Lite address and confirm
+    # that BOTH the write and read return a non-zero AXI response (error).
+    ########################################################################
+    bad_addr = 0x0010_0000
+    bad_data = (0xFFFFFFFF).to_bytes(length=4, byteorder='little')
+
+    rsp = await tb.axil_master.write(bad_addr, bad_data)
+    assert rsp.resp != AxiResp.OKAY
+
+    rsp = await tb.axil_master.read(bad_addr, 4)
+    assert rsp.resp != AxiResp.OKAY
+
     await RisingEdge(dut.S_AXI_ACLK)
     await RisingEdge(dut.S_AXI_ACLK)
 
