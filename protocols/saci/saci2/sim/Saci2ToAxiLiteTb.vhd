@@ -50,7 +50,7 @@ end Saci2ToAxiLiteTb;
 architecture mapping of Saci2ToAxiLiteTb is
 
    constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(0 downto 0) := (
-      0 => (
+      0               => (
          baseAddr     => x"0000_0000",
          addrBits     => 24,
          connectivity => x"FFFF"));
@@ -191,10 +191,10 @@ begin
          sAxiReadMasters(0)  => asicAxilReadMaster,
          sAxiReadSlaves(0)   => asicAxilReadSlave,
          -- Master AXIL Ports
-         mAxiWriteMasters(0)    => memAxilWriteMaster,
-         mAxiWriteSlaves(0)     => memAxilWriteSlave,
-         mAxiReadMasters(0)     => memAxilReadMaster,
-         mAxiReadSlaves(0)      => memAxilReadSlave);
+         mAxiWriteMasters(0) => memAxilWriteMaster,
+         mAxiWriteSlaves(0)  => memAxilWriteSlave,
+         mAxiReadMasters(0)  => memAxilReadMaster,
+         mAxiReadSlaves(0)   => memAxilReadSlave);
 
    U_MEM : entity surf.AxiDualPortRam
       generic map (
