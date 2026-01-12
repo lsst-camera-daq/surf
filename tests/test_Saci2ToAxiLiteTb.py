@@ -13,7 +13,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiLiteBus, AxiLiteMaster
+from cocotbext.axi import AxiLiteBus, AxiLiteMaster, AxiResp
 
 # test_Saci2ToAxiLiteTb
 from cocotb_test.simulator import run
@@ -74,19 +74,47 @@ async def run_test_words(dut):
     # Wait for internal reset to fall
     await Timer(10, 'us')
 
+    ########################################################################
+    # Positive test coverage:
+    # Iterate over all valid high address offsets (0–16) and low word offsets
+    # to verify correct AXI-Lite read/write behavior across the full mapped
+    # SACI-to-AXI-Lite address space.
+    ########################################################################
     for offsetHigh in range(17):
         for offsetLow in range(0, 0xF, 4):
             high = 0
             if offsetHigh != 0:
                 high = (1 << (offsetHigh+3))
             addr = high | offsetLow
-
             test_data = addr.to_bytes(length=4, byteorder='little')
-            event = tb.axil_master.init_write(addr, test_data)
-            await event.wait()
-            event = tb.axil_master.init_read(addr, 4)
-            await event.wait()
-            assert event.data.data == test_data
+
+            rsp = await tb.axil_master.write(addr, test_data)
+            assert rsp.resp == AxiResp.OKAY
+
+    for offsetHigh in range(17):
+        for offsetLow in range(0, 0xF, 4):
+            high = 0
+            if offsetHigh != 0:
+                high = (1 << (offsetHigh+3))
+            addr = high | offsetLow
+            test_data = addr.to_bytes(length=4, byteorder='little')
+
+            rsp = await tb.axil_master.read(addr, 4)
+            assert rsp.resp == AxiResp.OKAY
+            assert rsp.data == test_data
+
+    ########################################################################
+    # Negative test: access an unmapped/invalid AXI-Lite address and confirm
+    # that BOTH the write and read return a non-zero AXI response (error).
+    ########################################################################
+    bad_addr = 0x0010_0000
+    bad_data = (0xFFFFFFFF).to_bytes(length=4, byteorder='little')
+
+    rsp = await tb.axil_master.write(bad_addr, bad_data)
+    assert rsp.resp != AxiResp.OKAY
+
+    rsp = await tb.axil_master.read(bad_addr, 4)
+    assert rsp.resp != AxiResp.OKAY
 
     await RisingEdge(dut.S_AXI_ACLK)
     await RisingEdge(dut.S_AXI_ACLK)
