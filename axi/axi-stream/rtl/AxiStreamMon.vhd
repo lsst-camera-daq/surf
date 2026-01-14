@@ -91,6 +91,7 @@ architecture rtl of AxiStreamMon is
    signal bwMax : slv(39 downto 0);
    signal bwMin : slv(39 downto 0);
 
+   signal axisReset        : sl;
    signal frameRateReset   : sl;
    signal frameRateUpdate  : sl;
    signal frameRateSync    : slv(31 downto 0);
@@ -106,11 +107,11 @@ begin
       generic map (
          TPD_G          => TPD_G,
          IN_POLARITY_G  => RST_POLARITY_G,
-         OUT_POLARITY_G => RST_POLARITY_G)
+         OUT_POLARITY_G => '1')
       port map (
          clk      => axisClk,
          asyncRst => statusRst,
-         syncRst  => frameRateReset);
+         syncRst  => frameRateReset);   -- Always active HIGH reset
 
    U_packetRate : entity surf.SyncTrigRate
       generic map (
@@ -132,7 +133,9 @@ begin
          locClk          => axisClk,
          locRst          => frameRateReset,
          refClk          => axisClk,
-         refRst          => axisRst);
+         refRst          => axisReset);
+
+   axisReset <= axisRst when(RST_POLARITY_G = '1') else not(axisRst);  -- Always active HIGH reset
 
    SyncOut_frameRate : entity surf.SynchronizerFifo
       generic map (
@@ -290,7 +293,7 @@ begin
          WIDTH_G      => 32)
       port map (
          -- ASYNC statistics reset
-         rstStat => statusRst,
+         rstStat => frameRateReset,
          -- Write Interface (wrClk domain)
          wrClk   => axisClk,
          wrEn    => r.sizeValid,
@@ -309,7 +312,7 @@ begin
          WIDTH_G      => 40)
       port map (
          -- ASYNC statistics reset
-         rstStat => statusRst,
+         rstStat => frameRateReset,
          -- Write Interface (wrClk domain)
          wrClk   => axisClk,
          wrEn    => r.updated,
