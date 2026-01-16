@@ -76,8 +76,8 @@ begin
          DIV     => "000",
          O       => coreClock);
 
-   refClock <= gtRefClk when(QPLL_REFCLK_SEL_G = "111") else refClk;
-   coreClk  <= gtRefClk when(QPLL_REFCLK_SEL_G = "111") else coreClock;
+   refClock <= gtRefClk     when(EXT_REF_G) else refClk;
+   coreClk  <= gtRefClkBufg when(EXT_REF_G) else coreClock;
 
    qpllReset(0) <= qpllRst(0) or coreRst;
    qpllReset(1) <= qpllRst(1) or coreRst;
