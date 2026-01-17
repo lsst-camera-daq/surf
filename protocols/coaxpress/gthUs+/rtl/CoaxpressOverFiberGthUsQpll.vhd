@@ -99,7 +99,7 @@ begin
          QPLL_CFG3_G        => (others => x"0120"),
          QPLL_CFG4_G        => (others => x"0003"),
          QPLL_CP_G          => (others => "0011111111"),
-         QPLL_CP_G3_G       => (others => "0001111111"),
+         QPLL_CP_G3_G       => (others => "0000001111"),
          QPLL_FBDIV_G       => (others => 66),
          QPLL_FBDIV_G3_G    => (others => 160),
          QPLL_INIT_CFG0_G   => (others => x"02B2"),
