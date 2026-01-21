@@ -9,7 +9,6 @@
 #-----------------------------------------------------------------------------
 
 import pyrogue as pr
-import rogue
 
 class Si5345PageBase(pr.Device):
     def __init__(self,
