@@ -64,6 +64,8 @@ end entity AxiDualPortRam;
 
 architecture rtl of AxiDualPortRam is
 
+   constant NOT_RST_C : sl := not RST_POLARITY_G;
+
    -- Number of Axi address bits that need to be manually decoded
    constant AXI_DEC_BITS_C : integer := ite(DATA_WIDTH_G <= 32, 0, log2((DATA_WIDTH_G-1)/32));
 
@@ -153,7 +155,7 @@ begin
             clka  => axiClk,
             ena   => '1',
             wea   => r.axiWrStrobe(ADDR_AXI_BYTES_C-1 downto 0),
-            rsta  => '0',
+            rsta  => NOT_RST_C,
             addra => r.axiAddr,
             dina  => axiWrDataFanout(DATA_WIDTH_G-1 downto 0),
             douta => axiDout(DATA_WIDTH_G-1 downto 0),
@@ -161,7 +163,7 @@ begin
             clkb  => clk,
             enb   => en,
             web   => weByteMask,
-            rstb  => '0',
+            rstb  => NOT_RST_C,
             addrb => addr,
             dinb  => din,
             doutb => doutInt);
@@ -184,7 +186,7 @@ begin
             clka  => axiClk,
             ena   => '1',
             wea   => r.axiWrStrobe(ADDR_AXI_BYTES_C-1 downto 0),
-            rsta  => '0',
+            rsta  => NOT_RST_C,
             addra => r.axiAddr,
             dina  => axiWrDataFanout(DATA_WIDTH_G-1 downto 0),
             douta => axiDout(DATA_WIDTH_G-1 downto 0),
@@ -192,7 +194,7 @@ begin
             clkb  => clk,
             enb   => en,
             web   => weByteMask,
-            rstb  => '0',
+            rstb  => NOT_RST_C,
             addrb => addr,
             dinb  => din,
             doutb => doutInt);
@@ -220,14 +222,14 @@ begin
                ena     => en,
                wea     => we,
                weaByte => weByte,
-               rsta    => '0',
+               rsta    => NOT_RST_C,
                addra   => addr,
                dina    => din,
                douta   => doutInt,
 
                clkb  => axiClk,
                enb   => '1',
-               rstb  => '0',
+               rstb  => NOT_RST_C,
                addrb => r.axiAddr,
                doutb => axiDout(DATA_WIDTH_G-1 downto 0));
       end generate;
@@ -253,13 +255,13 @@ begin
                clka    => axiClk,
                ena     => '1',
                weaByte => r.axiWrStrobe(ADDR_AXI_BYTES_C-1 downto 0),
-               rsta    => '0',
+               rsta    => NOT_RST_C,
                addra   => r.axiAddr,
                dina    => axiWrDataFanout(DATA_WIDTH_G-1 downto 0),
                douta   => axiDout(DATA_WIDTH_G-1 downto 0),
                clkb    => clk,
                enb     => en,
-               rstb    => '0',
+               rstb    => NOT_RST_C,
                addrb   => addr,
                doutb   => doutInt);
       end generate;
@@ -283,7 +285,7 @@ begin
                ena     => '1',                                       -- [in]
                wea     => '1',
                weaByte => r.axiWrStrobe(ADDR_AXI_BYTES_C-1 downto 0),
-               rsta    => '0',                                       -- [in]
+               rsta    => NOT_RST_C,                                 -- [in]
                addra   => r.axiAddr,                                 -- [in]
                dina    => axiWrDataFanout(DATA_WIDTH_G-1 downto 0),  -- [in]
                douta   => axiDout(DATA_WIDTH_G-1 downto 0),          -- [out]
@@ -291,7 +293,7 @@ begin
                enb     => en,                                        -- [in]
                web     => we,                                        -- [in]
                webByte => weByteMask,                                -- [in]
-               rstb    => '0',                                       -- [in]
+               rstb    => NOT_RST_C,                                 -- [in]
                addrb   => addr,                                      -- [in]
                dinb    => din,                                       -- [in]
                doutb   => doutInt);                                  -- [out]
