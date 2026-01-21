@@ -323,7 +323,7 @@ begin
          process (fifoReadLast, fifoValidInt, mAxisClk, mAxisRst) is
          begin
             if (RST_ASYNC_G) and (mAxisRst = RST_POLARITY_G or fifoReadLast = '1' or fifoValidInt = '0') then
-               fifoInFrame <= '0' after TPD_G;
+               fifoInFrame <= '0';
 
             elsif (rising_edge(mAxisClk)) then
 
@@ -350,10 +350,10 @@ begin
          process (mAxisClk, mAxisRst) is
          begin
             if (RST_ASYNC_G and mAxisRst = RST_POLARITY_G) then
-               fifoInFrame <= '0' after TPD_G;
-               burstEn     <= '0' after TPD_G;
-               burstLast   <= '0' after TPD_G;
-               firstCycle  <= '1' after TPD_G;
+               fifoInFrame <= '0';
+               burstEn     <= '0';
+               burstLast   <= '0';
+               firstCycle  <= '1';
             elsif (rising_edge(mAxisClk)) then
                if (RST_ASYNC_G = false and mAxisRst = RST_POLARITY_G) or (fifoReadLast = '1') then
                   -- Reset the flags
