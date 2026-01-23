@@ -383,6 +383,13 @@ package body AxiStreamPkg is
       -- Check if TKEEP_MODE_C = TKEEP_COUNT_C
       if (axisConfig.TKEEP_MODE_C = TKEEP_COUNT_C) then
          retVar := conv_integer(tKeep(bitSize(axisConfig.TDATA_BYTES_C)-1 downto 0));
+
+      -- Check if TKEEP_MODE_C = TKEEP_FIXED_C
+      elsif (axisConfig.TKEEP_MODE_C = TKEEP_FIXED_C) then
+         -- TKEEP not used and using a full word every TXN
+         retVar := axisConfig.TDATA_BYTES_C;
+
+      -- Else TKEEP_MODE_C is either TKEEP_NORMAL_C or TKEEP_COMP_C
       else
          for i in 0 to axisConfig.TDATA_BYTES_C-1 loop
             -- report "AxiStreamPkg::genTKeep( i:" & integer'image(i) & ")" severity warning;
