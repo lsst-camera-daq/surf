@@ -187,8 +187,9 @@ package AxiLitePkg is
       readEnable  => '0');
 
    --------------------------------------------------------
-   -- AXI bus, read/write endpoint record, RTH 1/27/2016
+   -- AXI bus, read/write endpoint record
    --------------------------------------------------------
+   -- Base Record
    type AxiLiteEndpointType is record
       axiReadMaster  : AxiLiteReadMasterType;
       axiReadSlave   : AxiLiteReadSlaveType;
@@ -197,12 +198,16 @@ package AxiLitePkg is
       axiStatus      : AxiLiteStatusType;
    end record AxiLiteEndpointType;
 
+   -- Initialization constants
    constant AXI_LITE_ENDPOINT_INIT_C : AxiLiteEndpointType := (
       axiReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
       axiReadSlave   => AXI_LITE_READ_SLAVE_INIT_C,
       axiWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
       axiWriteSlave  => AXI_LITE_WRITE_SLAVE_INIT_C,
       axiStatus      => AXI_LITE_STATUS_INIT_C);
+
+   -- Array
+   type AxiLiteEndpointArray is array (natural range<>) of AxiLiteEndpointType;
 
    ----------------------------------------------------------------------------------
    -- Constants for endpoint abstractions (migrated from legacy AxiLiteMasterPkg.vhd)
