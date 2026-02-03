@@ -34,7 +34,7 @@ GHDLFLAGS = --workdir=$(OUT_DIR) --ieee=synopsys -fexplicit -frelaxed-rules  --w
 include $(RUCKUS_DIR)/system_shared.mk
 
 # Override system_shared.mk build string
-export GHDL_VERSION   = $(shell ghdl -v 2>&1 | head -n 1)
+export GHDL_VERSION   = $(shell ghdl -v 2>&1 | head -n 1 | awk '{print $$1, $$2}')
 export BUILD_STRING   = $(PROJECT): $(GHDL_VERSION), $(BUILD_SYS_NAME) ($(BUILD_SVR_TYPE)), Built $(BUILD_DATE) by $(BUILD_USER)
 
 all: syntax
