@@ -45,6 +45,7 @@ end RogueTcpStream;
 
 -- Define architecture
 architecture RogueTcpStream of RogueTcpStream is
+
 ------------------------------------------------------------------------
 -- VHPI not supported by GHDL yet
 ------------------------------------------------------------------------

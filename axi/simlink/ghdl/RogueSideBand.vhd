@@ -33,6 +33,7 @@ end RogueSideBand;
 
 -- Define architecture
 architecture RogueSideBand of RogueSideBand is
+
 ------------------------------------------------------------------------
 -- VHPI not supported by GHDL yet
 ------------------------------------------------------------------------

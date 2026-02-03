@@ -53,6 +53,7 @@ end RogueTcpMemory;
 
 -- Define architecture
 architecture RogueTcpMemory of RogueTcpMemory is
+
 ------------------------------------------------------------------------
 -- VHPI not supported by GHDL yet
 ------------------------------------------------------------------------

@@ -17,6 +17,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library surf;
+use surf.StdRtlPkg.all;
+
 -- uncomment the following library declaration if using
 -- arithmetic functions with signed or unsigned values
 --use ieee.numeric_std.all;
