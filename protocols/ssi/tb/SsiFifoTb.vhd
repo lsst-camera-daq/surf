@@ -194,8 +194,7 @@ begin
          PRBS_SEED_SIZE_G           => PRBS_SEED_SIZE_C,
          PRBS_TAPS_G                => PRBS_TAPS_C,
          -- AXI Stream Configurations
-         SLAVE_AXI_STREAM_CONFIG_G  => AXI_STREAM_CONFIG_C,
-         MASTER_AXI_STREAM_CONFIG_G => AXI_STREAM_CONFIG_C)
+         SLAVE_AXI_STREAM_CONFIG_G  => AXI_STREAM_CONFIG_C)
       port map (
          -- Streaming RX Data Interface (sAxisClk domain)
          sAxisClk       => rxClk,
