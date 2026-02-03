@@ -129,7 +129,6 @@ begin
       generic map (
          TPD_G                => TPD_G,
          MAX_PACKET_BYTES_G   => 512*8,
-         OUTPUT_SSI_G         => true,
          INPUT_PIPE_STAGES_G  => 0,
          OUTPUT_PIPE_STAGES_G => 0)
       port map (
@@ -148,6 +147,7 @@ begin
       port map (
          axisClk     => axisClk,                 -- [in]
          axisRst     => axisRst,                 -- [in]
+         linkGood    => '1',                     -- [in]
          sAxisMaster => packetizedAxisMaster,    -- [in]
          sAxisSlave  => packetizedAxisSlave,     -- [out]
          mAxisMaster => depacketizedAxisMaster,  -- [out]
