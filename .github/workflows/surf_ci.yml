@@ -13,19 +13,17 @@
 # secrets.GH_TOKEN
 # secrets.CONDA_UPLOAD_TOKEN_TAG
 
-name: SURF Integration
+name: CI
 on: [push]
 
 jobs:
 
 # ----------------------------------------------------------------------------
-
-  test_and_document:
-    name: Test And Generate Documentation
+  lint:
+    name: Linting
     runs-on: ubuntu-24.04
-    steps:
 
-      # This step checks out a copy of your repository.
+    steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -37,24 +35,18 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install make python3 python3-pip tclsh ghdl
-          sudo apt-get install doxygen doxygen-doc doxygen-latex doxygen-gui graphviz
           python -m pip install --upgrade pip
           pip install -r pip_requirements.txt
-          git clone https://github.com/slaclab/ruckus.git
-          pip install -r ruckus/scripts/pip_requirements.txt
 
       - name: Check for trailing whitespace and tabs
         run: |
-          # Check for trailing whitespace
           if grep -rnI '[[:blank:]]$' --include=\*.{vhd,tcl,py} .; then
-            echo "Error: Trailing whitespace found in the repository!"
+            echo "Error: Trailing whitespace found!"
             exit 1
           fi
 
-          # Check for tab characters instead of spaces
           if grep -rnI $'\t' --include=\*.{vhd,tcl,py} .; then
-            echo "Error: Tab characters found in the repository! Please use spaces for indentation."
+            echo "Error: Tab characters found!"
             exit 1
           fi
 
@@ -71,6 +63,29 @@ jobs:
         run: |
           source scripts/vsg_linter.sh
 
+# ----------------------------------------------------------------------------
+  test:
+    name: Regression Tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make python3 python3-pip tclsh ghdl
+          python -m pip install --upgrade pip
+          pip install -r pip_requirements.txt
+          git clone https://github.com/slaclab/ruckus.git
+          pip install -r ruckus/scripts/pip_requirements.txt
+
       - name: VHDL Regression Testing
         run: |
           make MODULES=$PWD
@@ -81,8 +96,21 @@ jobs:
           codecov
           coverage report -m
 
+# ----------------------------------------------------------------------------
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install documentation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen doxygen-doc doxygen-latex doxygen-gui graphviz
+
       - name: Generate Documentation
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/pre-release'
         run: |
           doxygen Doxyfile
 
@@ -96,7 +124,7 @@ jobs:
 # ----------------------------------------------------------------------------
 
   gen_release:
-    needs: [test_and_document]
+    needs: [lint, test, docs]
     uses: slaclab/ruckus/.github/workflows/gen_release.yml@main
     with:
       version: '1.0.0'
@@ -106,7 +134,7 @@ jobs:
 # ----------------------------------------------------------------------------
 
   conda_build_lib:
-    needs: [test_and_document]
+    needs: [lint, test, docs]
     uses: slaclab/ruckus/.github/workflows/conda_build_lib.yml@main
     with:
       version: '1.0.0'
