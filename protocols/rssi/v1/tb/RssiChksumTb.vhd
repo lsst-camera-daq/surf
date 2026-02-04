@@ -17,33 +17,17 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library surf;
+use surf.StdRtlPkg.all;
+
 -- uncomment the following library declaration if using
 -- arithmetic functions with signed or unsigned values
 --use ieee.numeric_std.all;
 
-entity chksum_tb is
-end chksum_tb;
+entity RssiChksumTb is
+end RssiChksumTb;
 
-architecture behavior of chksum_tb is
-
-   -- component declaration for the unit under test (uut)
-
-   component chksum
-      port(
-         clk_i    : in  std_logic;
-         rst_i    : in  std_logic;
-         enable_i : in  std_logic;
-         strobe_i : in  std_logic;
-         length_i : in  positive;
-         init_i   : in  std_logic_vector(15 downto 0);
-         data_i   : in  std_logic_vector(63 downto 0);
-         chksum_o : out std_logic_vector(15 downto 0);
-         --chksumreg_o : out  std_logic_vector(15 downto 0);
-         valid_o  : out std_logic;
-         check_o  : out std_logic
-         );
-   end component;
-
+architecture behavior of RssiChksumTb is
 
    --Inputs
    signal clk_i    : std_logic                     := '0';
@@ -65,19 +49,20 @@ architecture behavior of chksum_tb is
 begin
 
    -- Instantiate the Unit Under Test (UUT)
-   uut : Chksum port map (
-      clk_i    => clk_i,
-      rst_i    => rst_i,
-      enable_i => enable_i,
-      strobe_i => strobe_i,
-      init_i   => init_i,
-      data_i   => data_i,
-      chksum_o => chksum_o,
-      length_i => 3,
-      --chksumReg_o => chksumReg_o,
-      valid_o  => valid_o,
-      check_o  => check_o
-      );
+   uut : entity surf.RssiChksum
+      port map (
+         clk_i    => clk_i,
+         rst_i    => rst_i,
+         enable_i => enable_i,
+         strobe_i => strobe_i,
+         length_i => 3,
+         init_i   => init_i,
+         data_i   => data_i,
+         chksum_o => chksum_o,
+         --chksumReg_o => chksumReg_o,
+         valid_o  => valid_o,
+         check_o  => check_o
+         );
 
    -- Clock process definitions
    clk_i_process : process

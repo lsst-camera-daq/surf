@@ -9,9 +9,6 @@
 #-----------------------------------------------------------------------------
 
 import pyrogue as pr
-import rogue
-
-rogue.Version.minVersion('5.4.0')
 
 class Si5345PageBase(pr.Device):
     def __init__(self,
